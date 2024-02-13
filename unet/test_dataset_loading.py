@@ -1,3 +1,5 @@
+from utils import logTensorInfo
+
 import logging
 
 import torch
@@ -6,13 +8,6 @@ from torchvision.datasets import Cityscapes
 from torchvision.transforms import ToTensor
 
 import matplotlib.pyplot as plt
-
-def logTensorInfo(x_ : torch.Tensor, name_ : str):
-    logging.info(f"--- {name_} Info:")
-    logging.info(f"--- Shape: {x_.shape}")
-    logging.info(f"--- Dtype: {x_.dtype}")
-    logging.info(f"--- Device: {x_.device}")
-    logging.info(f"------------------------")
 
 def main():
     logging.basicConfig(format="[test_dataset_loading.py][%(levelname)s]: %(message)s",
