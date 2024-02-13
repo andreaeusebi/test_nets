@@ -1,5 +1,3 @@
-from euse_unet import EuseUnet
-
 import logging
 
 import torch
