@@ -18,9 +18,11 @@ def main():
 
     ## Params
     input_channels = 1
+    output_channels = 2
 
     ## Instantiate an EuseUnet
-    euse_unet = EuseUnet(input_channels_=input_channels).to(device)
+    euse_unet = EuseUnet(input_channels_=input_channels,
+                         output_channels_=output_channels).to(device)
 
     logging.debug(f"Model is on device: {next(euse_unet.parameters()).device}")
 

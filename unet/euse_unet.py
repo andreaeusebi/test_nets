@@ -33,7 +33,7 @@ class UpStep(nn.Module):
         ## Upsampling and channels halving
         x1_ = self.upsampling(x1_)
 
-        logging.debug(f"Shape after upsampling: {x1_.shape}")
+        # logging.debug(f"Shape after upsampling: {x1_.shape}")
 
         # ## Pad the smaller image to fit larger image shape
         # # input is CHW
@@ -44,17 +44,17 @@ class UpStep(nn.Module):
         #             [diffX // 2, diffX - diffX // 2, diffY // 2, diffY - diffY // 2],
         #             value=0.0)
 
-        logging.debug(f"x2 shape: {x2_.shape}")
+        # logging.debug(f"x2 shape: {x2_.shape}")
 
         ## Crop larger image to fit smaller image (as in the paper)
         x2_cropped = CenterCrop(size=(x1_.shape[2], x1_.shape[3]))(x2_)
 
-        logging.debug(f"x2_cropped shape: {x2_cropped.shape}")
+        # logging.debug(f"x2_cropped shape: {x2_cropped.shape}")
         
         ## Concat the two tensors
         x_cat = torch.cat([x2_cropped, x1_], dim=1)
 
-        logging.debug(f"x_cat shape: {x_cat.shape}")
+        # logging.debug(f"x_cat shape: {x_cat.shape}")
 
         ## Double conv
         return self.double_conv(x_cat)
@@ -67,12 +67,15 @@ class EuseUnet(nn.Module):
     "U-Net: Convolutional Networks for Biomedical Image Segmentation".
     """
 
-    def __init__(self, input_channels_ : int):
+    def __init__(self,
+                 input_channels_ : int,
+                 output_channels_ : int):
         """
         Init method.
 
         Args:
             input_channels_ (int): Number of channels of input images.
+            output_channels_ (int): Desired number of output classes.
         """
 
         super().__init__()
@@ -171,6 +174,12 @@ class EuseUnet(nn.Module):
         
         self.block_9 = UpStep(in_channels_=128,
                               out_channels_=64)
+        
+        self.out_block = nn.Conv2d(in_channels=64,
+                                   out_channels=output_channels_,
+                                   kernel_size=1,
+                                   stride=1,
+                                   padding=0)
 
         logging.debug(f"--- EusenUnet:__init__() completed. ---")
 
@@ -222,7 +231,11 @@ class EuseUnet(nn.Module):
 
         logging.debug(f"Shape after block 9: {x.shape}")
 
-        return x
+        logits = self.out_block(x)
+
+        logging.debug(f"Shape after output block: {logits.shape}")
+
+        return logits
 
 def main():
     logging.basicConfig(format="[euse_unet.py][%(levelname)s]: %(message)s",
@@ -233,7 +246,8 @@ def main():
     logging.debug(f"Torch version: {torch.__version__}")
     logging.debug(f"Cuda available: {torch.cuda.is_available()}")
 
-    euse_unet = EuseUnet(input_channels_=1)
+    euse_unet = EuseUnet(input_channels_=1,
+                         output_channels_=2)
 
     logging.debug("--- main() completed. ---")
 
