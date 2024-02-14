@@ -1,6 +1,5 @@
 import utils
-from collections import namedtuple
-import cityscapes_dataset
+import datasets.cityscapes_dataset as cityscapes_dataset
 
 import logging
 
