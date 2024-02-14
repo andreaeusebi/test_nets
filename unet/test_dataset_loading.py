@@ -1,4 +1,6 @@
 import utils
+from collections import namedtuple
+import cityscapes_dataset
 
 import logging
 
@@ -15,7 +17,7 @@ def main():
     logging.getLogger('matplotlib.font_manager').setLevel(logging.ERROR)
     logging.getLogger('PIL.PngImagePlugin').setLevel(logging.ERROR)
 
-    logging.debug("--- main() started. ---")
+    logging.info("--- main() started. ---")
 
     ## Load training and validation dataset
     train_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
@@ -62,6 +64,17 @@ def main():
     plt.title("Same semantic mask with original gray scale values.")
     plt.waitforbuttonpress()
 
+    ## Plot with correct label colors
+    smnt_cc = utils.labelToMask(smnt_sample.squeeze(), cityscapes_dataset.PALETTE)
+
+    utils.logTensorInfo(smnt_cc, "smnt_cc")
+
+    plt.figure()
+    plt.imshow(torch.permute(smnt_cc, (1, 2, 0)))
+    plt.axis(False)
+    plt.title("Plot with correct label colors")
+    plt.waitforbuttonpress()
+
     ## Plot more images
     torch.manual_seed(42)
     fig = plt.figure()
@@ -99,7 +112,7 @@ def main():
     logging.info(f"train_features_batch.shape: {train_features_batch.shape}")
     logging.info(f"train_labels_batch.shape: {train_labels_batch.shape}")
 
-    logging.debug("--- main() completed. ---")
+    logging.info("--- main() completed. ---")
 
 if __name__ == "__main__":
     main()
