@@ -1,4 +1,4 @@
-from utils import logTensorInfo
+import utils
 
 import logging
 
@@ -23,14 +23,14 @@ def main():
                             mode="fine",
                             target_type="semantic",
                             transform=ToTensor(),
-                            target_transform=ToTensor())
+                            target_transform=utils.PILToTensor())
     
     val_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
                           split="val",
                           mode="fine",
                           target_type="semantic",
                           transform=ToTensor(),
-                          target_transform=ToTensor())
+                          target_transform=utils.PILToTensor())
     
     logging.debug(f"train data type: {type(train_data)}")
     logging.info(f"train images: {len(train_data.images)}")
@@ -41,10 +41,8 @@ def main():
 
     img_sample, smnt_sample = train_data[0]
     
-    logTensorInfo(img_sample, "img_sample")
-    
-    logging.debug(f"smnt_sample type: {type(smnt_sample)}")
-    logTensorInfo(smnt_sample, "smnt_sample")
+    utils.logTensorInfo(img_sample, "img_sample")
+    utils.logTensorInfo(smnt_sample, "smnt_sample")
 
     ## Plot first image with corresponding semantically segmented image
     fig = plt.figure()
@@ -55,6 +53,13 @@ def main():
     plt.imshow(smnt_sample.squeeze())
     plt.axis(False)
     plt.suptitle("First train image and segmentation (don't consider colormap)")
+    plt.waitforbuttonpress()
+
+    ## Plot same semantic mask with original gray scale values
+    plt.figure()
+    plt.imshow(smnt_sample.squeeze(), cmap="gray", vmin=0, vmax=255)
+    plt.axis(False)
+    plt.title("Same semantic mask with original gray scale values.")
     plt.waitforbuttonpress()
 
     ## Plot more images
