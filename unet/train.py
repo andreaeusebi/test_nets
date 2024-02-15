@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import Cityscapes
 from torchvision.transforms import ToTensor
 from torchvision.transforms.v2 import Resize
+from torchvision.transforms import CenterCrop
 
 # Setup device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -19,7 +20,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 ## Params
 INPUT_CHANNELS = 3
 OUTPUT_CHANNELS = 34
-BATCH_SIZE = 32
+BATCH_SIZE = 2
 
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
@@ -32,8 +33,16 @@ def accuracy_fn(y_true, y_pred):
     Returns:
         [torch.float]: Accuracy value between y_true and y_pred, e.g. 78.45
     """
+
+    utils.logTensorInfo(y_true, "y_true")
+    utils.logTensorInfo(y_pred, "y_pred")
+
     correct = torch.eq(y_true, y_pred).sum().item()
-    acc = (correct / len(y_pred)) * 100
+
+    logging.debug(f"Correct: {correct}")
+    logging.debug(f"torch.numel(y_pred): {torch.numel(y_pred)}")
+
+    acc = (correct / torch.numel(y_pred)) * 100
     return acc
 
 def train_step(model: torch.nn.Module,
@@ -44,23 +53,28 @@ def train_step(model: torch.nn.Module,
                device: torch.device = device):
     train_loss, train_acc = 0, 0
     model.to(device)
+
+    model.train()
+
+    BATCH_TO_USE = 30
+
     for batch, (X, y) in enumerate(data_loader):
         print(f"--- Beginning of batch {batch}. ---")
 
-        utils.logTensorInfo(X, "X")
-        utils.logTensorInfo(y, "y")
+        if (batch >= BATCH_TO_USE):
+            break
 
+        # [N x channels x 572 x 572]
         X = Resize(size=(572, 572), antialias=True)(X)
-        y = Resize(size=(572, 572), antialias=True)(y)
-
-        utils.logTensorInfo(X, "X")
-        utils.logTensorInfo(y, "y")
+        # [N x 388 x 388]
+        y = Resize(size=(572, 572), antialias=True)(y).squeeze()
+        y = CenterCrop(size=(388, 388))(y)
 
         # Send data to GPU
         X, y = X.to(device), y.to(device)
 
         # 1. Forward pass
-        y_pred = model(X)
+        y_pred = model(X)   # [N x classes x 388 x 388]
 
         # 2. Calculate loss
         loss = loss_fn(y_pred, y)
@@ -78,8 +92,10 @@ def train_step(model: torch.nn.Module,
         optimizer.step()
 
     # Calculate loss and accuracy per epoch and print out what's happening
-    train_loss /= len(data_loader)
-    train_acc /= len(data_loader)
+    # train_loss /= len(data_loader)
+    # train_acc /= len(data_loader)
+    train_loss /= BATCH_TO_USE
+    train_acc /= BATCH_TO_USE
     print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
 
 # def test_step(data_loader: torch.utils.data.DataLoader,
@@ -171,9 +187,9 @@ def main():
     # Setup loss and optimizer
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.SGD(params=euse_unet.parameters(), 
-                                lr=0.1)
+                                lr=0.3)
     
-    epochs = 1
+    epochs = 5
     for epoch in tqdm(range(epochs)):
         print(f"Epoch: {epoch}\n---------")
         train_step(model=euse_unet,

@@ -13,11 +13,11 @@ def logTensorInfo(x_ : torch.Tensor, name_ : str):
         name_ (str): Name of the tensor.
     """
 
-    logging.info(f"--- {name_} Info:")
-    logging.info(f"--- Shape: {x_.shape}")
-    logging.info(f"--- Dtype: {x_.dtype}")
-    logging.info(f"--- Device: {x_.device}")
-    logging.info(f"------------------------")
+    logging.debug(f"--- {name_} Info:")
+    logging.debug(f"--- Shape: {x_.shape}")
+    logging.debug(f"--- Dtype: {x_.dtype}")
+    logging.debug(f"--- Device: {x_.device}")
+    logging.debug(f"------------------------")
 
 class PILToTensor:
     """
@@ -36,6 +36,7 @@ class PILToTensor:
         """
 
         image = functional.pil_to_tensor(image)
+        image = image.type(torch.LongTensor)
         return image
 
 def labelToMask(label: torch.Tensor, palette: list) -> torch.Tensor:
