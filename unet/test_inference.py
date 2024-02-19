@@ -115,8 +115,8 @@ def main():
     plt.title("Original Ground Truth image.")
 
     # Convert to a torch tensor (it is important to use same
-    # transform used in training, in this case utils.PILToTensor()).
-    gt_img = utils.PILToTensor()(pil_gt_img)
+    # transform used in training, in this case utils.PILToLongTensor()).
+    gt_img = utils.PILToLongTensor()(pil_gt_img)
     utils.logTensorInfo(gt_img, "Original ground truth image")
 
     ## Resize (used nearest_exact to maintain correct labels)
