@@ -1,4 +1,3 @@
-# Allow Crtl-C to Works Despite Open Windows
 import signal as sg
 sg.signal(sg.SIGINT, sg.SIG_DFL)
 
