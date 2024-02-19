@@ -21,11 +21,11 @@ from torchvision.transforms.functional import pil_to_tensor
 # Setup device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-INPUT_IMG_PATH = ("/home/andrea/datasets/cityscapes/leftImg8bit/train/dusseldorf/"
-                  "dusseldorf_000011_000019_leftImg8bit.png")
+INPUT_IMG_PATH = ("/home/andrea/datasets/cityscapes/leftImg8bit/val/frankfurt/"
+                  "frankfurt_000000_000294_leftImg8bit.png")
 
-GT_IMG_PATH = ("/home/andrea/datasets/cityscapes/gtFine/train/dusseldorf/"
-               "dusseldorf_000011_000019_gtFine_labelIds.png")
+GT_IMG_PATH = ("/home/andrea/datasets/cityscapes/gtFine/val/frankfurt/"
+               "frankfurt_000000_000294_gtFine_labelIds.png")
 
 LOAD_MODEL = True
 MODEL_PATH = "./model_params/UNET_params.pth"
@@ -73,8 +73,9 @@ def main():
     net = UNET(in_channels_=3,
                out_channels_=34)
     
-    # Load in the saved state_dict()
-    net.load_state_dict(torch.load(f=MODEL_PATH))
+    if LOAD_MODEL is True:
+        # Load in the saved state_dict()
+        net.load_state_dict(torch.load(f=MODEL_PATH))
 
     logging.info("### Model params correctly loaded! ###")
 
