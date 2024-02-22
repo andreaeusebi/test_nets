@@ -1,5 +1,6 @@
 
-from euse_unet import EuseUnet
+# from euse_unet import EuseUnet
+from model import UNET
 import utils
 import datasets.cityscapes_dataset as cityscapes_dataset
 
@@ -18,9 +19,11 @@ from torchvision.transforms import CenterCrop
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 ## Params
-INPUT_CHANNELS = 3
-OUTPUT_CHANNELS = 34
-BATCH_SIZE = 2
+INPUT_CHANNELS      = 3
+OUTPUT_CHANNELS     = 34
+BATCH_SIZE          = 4
+EPOCHS              = 1
+SAVE_MODEL_PATH     = "./model_params/UNET_params.pth"
 
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
@@ -34,8 +37,8 @@ def accuracy_fn(y_true, y_pred):
         [torch.float]: Accuracy value between y_true and y_pred, e.g. 78.45
     """
 
-    utils.logTensorInfo(y_true, "y_true")
-    utils.logTensorInfo(y_pred, "y_pred")
+    # utils.logTensorInfo(y_true, "y_true")
+    # utils.logTensorInfo(y_pred, "y_pred")
 
     correct = torch.eq(y_true, y_pred).sum().item()
 
@@ -56,29 +59,31 @@ def train_step(model: torch.nn.Module,
 
     model.train()
 
-    BATCH_TO_USE = 30
-
     for batch, (X, y) in enumerate(data_loader):
-        print(f"--- Beginning of batch {batch}. ---")
+        logging.info(f"--- Beginning of batch {batch}. ---")
 
-        if (batch >= BATCH_TO_USE):
-            break
-
-        # [N x channels x 572 x 572]
-        X = Resize(size=(572, 572), antialias=True)(X)
-        # [N x 388 x 388]
-        y = Resize(size=(572, 572), antialias=True)(y).squeeze()
-        y = CenterCrop(size=(388, 388))(y)
+        H = 128
+        W = 256
+        
+        ## Resize image to to the requested shape by Unet
+        ## Disable antialiasing since it smooths edges (it adds ficticious classes
+        ## at the borders of different labels)
+        
+        # [N x channels x H x W]
+        X = Resize(size=(H, W), antialias=False)(X)
+        # [N x 1 x H x W] -> [N x H x W]
+        y = Resize(size=(H, W), antialias=False)(y).squeeze(dim=1)
 
         # Send data to GPU
         X, y = X.to(device), y.to(device)
 
         # 1. Forward pass
-        y_pred = model(X)   # [N x classes x 388 x 388]
+        y_pred = model(X)   # [N x classes x H x W]
 
         # 2. Calculate loss
         loss = loss_fn(y_pred, y)
-        train_loss += loss
+
+        train_loss += loss.detach()
         train_acc += accuracy_fn(y_true=y,
                                  y_pred=y_pred.argmax(dim=1)) # Go from logits -> pred labels
 
@@ -92,11 +97,9 @@ def train_step(model: torch.nn.Module,
         optimizer.step()
 
     # Calculate loss and accuracy per epoch and print out what's happening
-    # train_loss /= len(data_loader)
-    # train_acc /= len(data_loader)
-    train_loss /= BATCH_TO_USE
-    train_acc /= BATCH_TO_USE
-    print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
+    train_loss /= len(data_loader)
+    train_acc /= len(data_loader)
+    logging.info(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
 
 # def test_step(data_loader: torch.utils.data.DataLoader,
 #               model: torch.nn.Module,
@@ -138,14 +141,14 @@ def main():
                             mode="fine",
                             target_type="semantic",
                             transform=ToTensor(),
-                            target_transform=utils.PILToTensor())
+                            target_transform=utils.PILToLongTensor())
     
     val_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
                           split="val",
                           mode="fine",
                           target_type="semantic",
                           transform=ToTensor(),
-                          target_transform=utils.PILToTensor())
+                          target_transform=utils.PILToLongTensor())
     
     logging.info(f"train images: {len(train_data.images)}")
     logging.info(f"train targets: {len(train_data.targets)}")
@@ -173,26 +176,27 @@ def main():
 
     # Check out what's inside the training dataloader
     train_features_batch, train_labels_batch = next(iter(train_dataloader))
-    logging.info(f"train_features_batch.shape: {train_features_batch.shape}")
-    logging.info(f"train_labels_batch.shape: {train_labels_batch.shape}")
     utils.logTensorInfo(train_features_batch, "train_features_batch")
     utils.logTensorInfo(train_labels_batch, "train_labels_batch")
 
     ## 3. Instantiate the model
-    euse_unet = EuseUnet(input_channels_=INPUT_CHANNELS,
-                         output_channels_=OUTPUT_CHANNELS).to(device)
+    # model = EuseUnet(input_channels_=INPUT_CHANNELS,
+                    #  output_channels_=OUTPUT_CHANNELS).to(device)
+    
+    model = UNET(in_channels_=INPUT_CHANNELS,
+                 out_channels_=OUTPUT_CHANNELS).to(device)
     
     ## 4. Train the model
 
     # Setup loss and optimizer
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(params=euse_unet.parameters(), 
-                                lr=0.3)
+    optimizer = torch.optim.SGD(params=model.parameters(), 
+                                lr=0.1)
     
-    epochs = 5
+    epochs = EPOCHS
     for epoch in tqdm(range(epochs)):
-        print(f"Epoch: {epoch}\n---------")
-        train_step(model=euse_unet,
+        logging.info(f"Epoch: {epoch}\n---------")
+        train_step(model=model,
                    data_loader=train_dataloader,  
                    loss_fn=loss_fn,
                    optimizer=optimizer,
@@ -203,6 +207,11 @@ def main():
         #     loss_fn=loss_fn,
         #     accuracy_fn=accuracy_fn
         # )
+
+    logging.info(f"Saving model parameters to: '{SAVE_MODEL_PATH}'")
+
+    # torch.save(obj=model.state_dict(),
+            #    f=SAVE_MODEL_PATH)
 
     logging.debug("--- main() completed. ---")
 
