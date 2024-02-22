@@ -23,6 +23,9 @@ INPUT_CHANNELS      = 3
 OUTPUT_CHANNELS     = 34
 BATCH_SIZE          = 4
 EPOCHS              = 1
+H                   = 128
+W                   = 256
+SAVE_MODEL          = False
 SAVE_MODEL_PATH     = "./model_params/UNET_params.pth"
 
 # Calculate accuracy (a classification metric)
@@ -54,17 +57,15 @@ def train_step(model: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                accuracy_fn,
                device: torch.device = device):
+    logging.info(f"Beginning a new TRAINING step.")
+
     train_loss, train_acc = 0, 0
     model.to(device)
 
     model.train()
 
-    for batch, (X, y) in enumerate(data_loader):
-        logging.info(f"--- Beginning of batch {batch}. ---")
-
-        H = 128
-        W = 256
-        
+    for batch, (X, y) in tqdm(enumerate(data_loader)):
+        logging.debug(f"--- Beginning of batch {batch}. ---")        
         ## Resize image to to the requested shape by Unet
         ## Disable antialiasing since it smooths edges (it adds ficticious classes
         ## at the borders of different labels)
@@ -101,33 +102,46 @@ def train_step(model: torch.nn.Module,
     train_acc /= len(data_loader)
     logging.info(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
 
-# def test_step(data_loader: torch.utils.data.DataLoader,
-#               model: torch.nn.Module,
-#               loss_fn: torch.nn.Module,
-#               accuracy_fn,
-#               device: torch.device = device):
-#     test_loss, test_acc = 0, 0
-#     model.to(device)
-#     model.eval() # put model in eval mode
-#     # Turn on inference context manager
-#     with torch.inference_mode(): 
-#         for X, y in data_loader:
-#             # Send data to GPU
-#             X, y = X.to(device), y.to(device)
+def test_step(data_loader: torch.utils.data.DataLoader,
+              model: torch.nn.Module,
+              loss_fn: torch.nn.Module,
+              accuracy_fn,
+              device: torch.device = device):
+    logging.info(f"Beginning a new TEST step.")
+
+    test_loss, test_acc = 0, 0
+    model.to(device)
+
+    model.eval() # put model in eval mode
+
+    # Turn on inference context manager
+    with torch.inference_mode(): 
+        for X, y in data_loader:
+            ## Resize image to to the requested shape by Unet
+            ## Disable antialiasing since it smooths edges (it adds ficticious classes
+            ## at the borders of different labels)
+
+            # [N x channels x H x W]
+            X = Resize(size=(H, W), antialias=False)(X)
+            # [N x 1 x H x W] -> [N x H x W]
+            y = Resize(size=(H, W), antialias=False)(y).squeeze(dim=1)
+
+            # Send data to GPU
+            X, y = X.to(device), y.to(device)
             
-#             # 1. Forward pass
-#             test_pred = model(X)
+            # 1. Forward pass
+            test_pred = model(X)
             
-#             # 2. Calculate loss and accuracy
-#             test_loss += loss_fn(test_pred, y)
-#             test_acc += accuracy_fn(y_true=y,
-#                 y_pred=test_pred.argmax(dim=1) # Go from logits -> pred labels
-#             )
+            # 2. Calculate loss and accuracy
+            test_loss += loss_fn(test_pred, y)
+            test_acc += accuracy_fn(y_true=y,
+                y_pred=test_pred.argmax(dim=1) # Go from logits -> pred labels
+            )
         
-#         # Adjust metrics and print out
-#         test_loss /= len(data_loader)
-#         test_acc /= len(data_loader)
-#         print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+        # Adjust metrics and print out
+        test_loss /= len(data_loader)
+        test_acc /= len(data_loader)
+        print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
 
 def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
@@ -200,18 +214,17 @@ def main():
                    data_loader=train_dataloader,  
                    loss_fn=loss_fn,
                    optimizer=optimizer,
-                   accuracy_fn=accuracy_fn
-        )
-        # test_step(data_loader=test_dataloader,
-        #     model=model_1,
-        #     loss_fn=loss_fn,
-        #     accuracy_fn=accuracy_fn
-        # )
+                   accuracy_fn=accuracy_fn)
+        
+        test_step(model=model,
+                  data_loader=val_dataloader,
+                  loss_fn=loss_fn,
+                  accuracy_fn=accuracy_fn)
 
-    logging.info(f"Saving model parameters to: '{SAVE_MODEL_PATH}'")
-
-    # torch.save(obj=model.state_dict(),
-            #    f=SAVE_MODEL_PATH)
+    if SAVE_MODEL is True:
+        logging.info(f"Saving model parameters to: '{SAVE_MODEL_PATH}'")
+        torch.save(obj=model.state_dict(),
+                   f=SAVE_MODEL_PATH)
 
     logging.debug("--- main() completed. ---")
 
