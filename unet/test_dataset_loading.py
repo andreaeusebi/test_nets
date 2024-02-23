@@ -1,3 +1,6 @@
+import signal as sg
+sg.signal(sg.SIGINT, sg.SIG_DFL)
+
 import utils
 import datasets.cityscapes_dataset as cityscapes_dataset
 
@@ -24,14 +27,14 @@ def main():
                             mode="fine",
                             target_type="semantic",
                             transform=ToTensor(),
-                            target_transform=utils.PILToTensor())
+                            target_transform=utils.PILToLongTensor())
     
     val_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
                           split="val",
                           mode="fine",
                           target_type="semantic",
                           transform=ToTensor(),
-                          target_transform=utils.PILToTensor())
+                          target_transform=utils.PILToLongTensor())
     
     logging.debug(f"train data type: {type(train_data)}")
     logging.info(f"train images: {len(train_data.images)}")
@@ -54,14 +57,12 @@ def main():
     plt.imshow(smnt_sample.squeeze())
     plt.axis(False)
     plt.suptitle("First train image and segmentation (don't consider colormap)")
-    plt.waitforbuttonpress()
 
     ## Plot same semantic mask with original gray scale values
     plt.figure()
     plt.imshow(smnt_sample.squeeze(), cmap="gray", vmin=0, vmax=255)
     plt.axis(False)
     plt.title("Same semantic mask with original gray scale values.")
-    plt.waitforbuttonpress()
 
     ## Plot with correct label colors
     smnt_cc = utils.labelToMask(smnt_sample.squeeze(), cityscapes_dataset.PALETTE)
@@ -72,7 +73,6 @@ def main():
     plt.imshow(torch.permute(smnt_cc, (1, 2, 0)))
     plt.axis(False)
     plt.title("Plot with correct label colors")
-    plt.waitforbuttonpress()
 
     ## Plot more images
     torch.manual_seed(42)
@@ -86,7 +86,6 @@ def main():
         plt.axis(False)
 
     plt.suptitle("Some random images from train set")
-    plt.waitforbuttonpress()
 
     ## Prepare DataLoader
     # Setup the batch size hyperparameter
@@ -108,8 +107,10 @@ def main():
 
     # Check out what's inside the training dataloader
     train_features_batch, train_labels_batch = next(iter(train_dataloader))
-    logging.info(f"train_features_batch.shape: {train_features_batch.shape}")
-    logging.info(f"train_labels_batch.shape: {train_labels_batch.shape}")
+    utils.logTensorInfo(train_features_batch, "train_features_batch")
+    utils.logTensorInfo(train_labels_batch, "train_labels_batch")
+
+    plt.show()
 
     logging.info("--- main() completed. ---")
 

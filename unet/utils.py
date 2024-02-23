@@ -13,26 +13,26 @@ def logTensorInfo(x_ : torch.Tensor, name_ : str):
         name_ (str): Name of the tensor.
     """
 
-    logging.debug(f"--- {name_} Info:")
-    logging.debug(f"--- Shape: {x_.shape}")
-    logging.debug(f"--- Dtype: {x_.dtype}")
-    logging.debug(f"--- Device: {x_.device}")
-    logging.debug(f"------------------------")
+    logging.info(f"--- {name_} Info:")
+    logging.info(f"--- Shape: {x_.shape}")
+    logging.info(f"--- Dtype: {x_.dtype}")
+    logging.info(f"--- Device: {x_.device}")
+    logging.info(f"------------------------")
 
-class PILToTensor:
+class PILToLongTensor:
     """
-    Class converting a PIL Image to a tensor of the same type. 
+    Class converting a PIL Image to a Long tensor (torch.int64). 
     """
 
     def __call__(self, image: any):
         """
-        Call method. Convert a PIL Image to a tensor of the same type
+        Call method. Convert a PIL Image to a tensor of Long type
 
         Args:
             image (PIL Image): Image to be converted to tensor.
 
         Returns:
-            torch.Tensor: Converted image.
+            torch.Tensor: Converted tensor image of type torch.int64.
         """
 
         image = functional.pil_to_tensor(image)

@@ -1,5 +1,6 @@
 
-from euse_unet import EuseUnet
+# from euse_unet import EuseUnet
+from model import UNET
 import utils
 import datasets.cityscapes_dataset as cityscapes_dataset
 
@@ -14,13 +15,20 @@ from torchvision.transforms import ToTensor
 from torchvision.transforms.v2 import Resize
 from torchvision.transforms import CenterCrop
 
+import matplotlib.pyplot as plt
+
 # Setup device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 ## Params
-INPUT_CHANNELS = 3
-OUTPUT_CHANNELS = 34
-BATCH_SIZE = 2
+INPUT_CHANNELS      = 3
+OUTPUT_CHANNELS     = 34
+BATCH_SIZE          = 4
+EPOCHS              = 20
+H                   = 128
+W                   = 256
+SAVE_MODEL          = True
+SAVE_MODEL_PATH     = "./model_params/UNET_params.pth"
 
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
@@ -34,8 +42,8 @@ def accuracy_fn(y_true, y_pred):
         [torch.float]: Accuracy value between y_true and y_pred, e.g. 78.45
     """
 
-    utils.logTensorInfo(y_true, "y_true")
-    utils.logTensorInfo(y_pred, "y_pred")
+    # utils.logTensorInfo(y_true, "y_true")
+    # utils.logTensorInfo(y_pred, "y_pred")
 
     correct = torch.eq(y_true, y_pred).sum().item()
 
@@ -51,34 +59,34 @@ def train_step(model: torch.nn.Module,
                optimizer: torch.optim.Optimizer,
                accuracy_fn,
                device: torch.device = device):
+    logging.info(f"Beginning a new TRAINING step.")
+
     train_loss, train_acc = 0, 0
     model.to(device)
 
     model.train()
 
-    BATCH_TO_USE = 30
-
-    for batch, (X, y) in enumerate(data_loader):
-        print(f"--- Beginning of batch {batch}. ---")
-
-        if (batch >= BATCH_TO_USE):
-            break
-
-        # [N x channels x 572 x 572]
-        X = Resize(size=(572, 572), antialias=True)(X)
-        # [N x 388 x 388]
-        y = Resize(size=(572, 572), antialias=True)(y).squeeze()
-        y = CenterCrop(size=(388, 388))(y)
+    for batch, (X, y) in tqdm(enumerate(data_loader)):
+        logging.debug(f"--- Beginning of batch {batch}. ---")        
+        ## Resize image to to the requested shape by Unet
+        ## Disable antialiasing since it smooths edges (it adds ficticious classes
+        ## at the borders of different labels)
+        
+        # [N x channels x H x W]
+        X = Resize(size=(H, W), antialias=False)(X)
+        # [N x 1 x H x W] -> [N x H x W]
+        y = Resize(size=(H, W), antialias=False)(y).squeeze(dim=1)
 
         # Send data to GPU
         X, y = X.to(device), y.to(device)
 
         # 1. Forward pass
-        y_pred = model(X)   # [N x classes x 388 x 388]
+        y_pred = model(X)   # [N x classes x H x W]
 
         # 2. Calculate loss
         loss = loss_fn(y_pred, y)
-        train_loss += loss
+
+        train_loss += loss.detach()
         train_acc += accuracy_fn(y_true=y,
                                  y_pred=y_pred.argmax(dim=1)) # Go from logits -> pred labels
 
@@ -92,39 +100,54 @@ def train_step(model: torch.nn.Module,
         optimizer.step()
 
     # Calculate loss and accuracy per epoch and print out what's happening
-    # train_loss /= len(data_loader)
-    # train_acc /= len(data_loader)
-    train_loss /= BATCH_TO_USE
-    train_acc /= BATCH_TO_USE
-    print(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
+    train_loss /= len(data_loader)
+    train_acc /= len(data_loader)
+    logging.info(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
 
-# def test_step(data_loader: torch.utils.data.DataLoader,
-#               model: torch.nn.Module,
-#               loss_fn: torch.nn.Module,
-#               accuracy_fn,
-#               device: torch.device = device):
-#     test_loss, test_acc = 0, 0
-#     model.to(device)
-#     model.eval() # put model in eval mode
-#     # Turn on inference context manager
-#     with torch.inference_mode(): 
-#         for X, y in data_loader:
-#             # Send data to GPU
-#             X, y = X.to(device), y.to(device)
+    return train_loss, train_acc
+
+def test_step(data_loader: torch.utils.data.DataLoader,
+              model: torch.nn.Module,
+              loss_fn: torch.nn.Module,
+              accuracy_fn,
+              device: torch.device = device):
+    logging.info(f"Beginning a new TEST step.")
+
+    test_loss, test_acc = 0, 0
+    model.to(device)
+
+    model.eval() # put model in eval mode
+
+    # Turn on inference context manager
+    with torch.inference_mode(): 
+        for X, y in data_loader:
+            ## Resize image to to the requested shape by Unet
+            ## Disable antialiasing since it smooths edges (it adds ficticious classes
+            ## at the borders of different labels)
+
+            # [N x channels x H x W]
+            X = Resize(size=(H, W), antialias=False)(X)
+            # [N x 1 x H x W] -> [N x H x W]
+            y = Resize(size=(H, W), antialias=False)(y).squeeze(dim=1)
+
+            # Send data to GPU
+            X, y = X.to(device), y.to(device)
             
-#             # 1. Forward pass
-#             test_pred = model(X)
+            # 1. Forward pass
+            test_pred = model(X)
             
-#             # 2. Calculate loss and accuracy
-#             test_loss += loss_fn(test_pred, y)
-#             test_acc += accuracy_fn(y_true=y,
-#                 y_pred=test_pred.argmax(dim=1) # Go from logits -> pred labels
-#             )
+            # 2. Calculate loss and accuracy
+            test_loss += loss_fn(test_pred, y)
+            test_acc += accuracy_fn(y_true=y,
+                y_pred=test_pred.argmax(dim=1) # Go from logits -> pred labels
+            )
         
-#         # Adjust metrics and print out
-#         test_loss /= len(data_loader)
-#         test_acc /= len(data_loader)
-#         print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+        # Adjust metrics and print out
+        test_loss /= len(data_loader)
+        test_acc /= len(data_loader)
+        logging.info(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+
+        return test_loss, test_acc
 
 def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
@@ -138,14 +161,14 @@ def main():
                             mode="fine",
                             target_type="semantic",
                             transform=ToTensor(),
-                            target_transform=utils.PILToTensor())
+                            target_transform=utils.PILToLongTensor())
     
     val_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
                           split="val",
                           mode="fine",
                           target_type="semantic",
                           transform=ToTensor(),
-                          target_transform=utils.PILToTensor())
+                          target_transform=utils.PILToLongTensor())
     
     logging.info(f"train images: {len(train_data.images)}")
     logging.info(f"train targets: {len(train_data.targets)}")
@@ -173,36 +196,70 @@ def main():
 
     # Check out what's inside the training dataloader
     train_features_batch, train_labels_batch = next(iter(train_dataloader))
-    logging.info(f"train_features_batch.shape: {train_features_batch.shape}")
-    logging.info(f"train_labels_batch.shape: {train_labels_batch.shape}")
     utils.logTensorInfo(train_features_batch, "train_features_batch")
     utils.logTensorInfo(train_labels_batch, "train_labels_batch")
 
     ## 3. Instantiate the model
-    euse_unet = EuseUnet(input_channels_=INPUT_CHANNELS,
-                         output_channels_=OUTPUT_CHANNELS).to(device)
+    # model = EuseUnet(input_channels_=INPUT_CHANNELS,
+                    #  output_channels_=OUTPUT_CHANNELS).to(device)
+    
+    model = UNET(in_channels_=INPUT_CHANNELS,
+                 out_channels_=OUTPUT_CHANNELS).to(device)
     
     ## 4. Train the model
 
     # Setup loss and optimizer
     loss_fn = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(params=euse_unet.parameters(), 
-                                lr=0.3)
+    optimizer = torch.optim.SGD(params=model.parameters(), 
+                                lr=0.1)
     
-    epochs = 5
+    train_losses = []
+    train_accuracies = []
+    test_losses = []
+    test_accuracies = []
+
+    epochs = EPOCHS
     for epoch in tqdm(range(epochs)):
-        print(f"Epoch: {epoch}\n---------")
-        train_step(model=euse_unet,
-                   data_loader=train_dataloader,  
-                   loss_fn=loss_fn,
-                   optimizer=optimizer,
-                   accuracy_fn=accuracy_fn
-        )
-        # test_step(data_loader=test_dataloader,
-        #     model=model_1,
-        #     loss_fn=loss_fn,
-        #     accuracy_fn=accuracy_fn
-        # )
+        logging.info(f"Epoch: {epoch}\n---------")
+        train_loss, train_acc = train_step(model=model,
+                                           data_loader=train_dataloader,
+                                           loss_fn=loss_fn,
+                                           optimizer=optimizer,
+                                           accuracy_fn=accuracy_fn)
+    
+        train_loss = train_loss.cpu()
+
+        train_losses.append(train_loss)
+        train_accuracies.append(train_acc)
+        
+        test_loss, test_acc = test_step(model=model,
+                                        data_loader=val_dataloader,
+                                        loss_fn=loss_fn,
+                                        accuracy_fn=accuracy_fn)
+        
+        test_loss = test_loss.cpu()
+        
+        test_losses.append(test_loss)
+        test_accuracies.append(test_acc)
+
+    ## Save model parameters
+    if SAVE_MODEL is True:
+        logging.info(f"Saving model parameters to: '{SAVE_MODEL_PATH}'")
+        torch.save(obj=model.state_dict(),
+                   f=SAVE_MODEL_PATH)
+        
+    ## Plot results
+    plt.figure()
+    plt.plot(train_losses)
+    plt.plot(test_losses)
+    plt.title("Train & Test Loss wrt Epochs")
+
+    plt.figure()
+    plt.plot(train_accuracies)
+    plt.plot(test_accuracies)
+    plt.title("Train & Test Accuracy wrt Epochs")
+
+    plt.show()
 
     logging.debug("--- main() completed. ---")
 
