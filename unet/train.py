@@ -15,6 +15,8 @@ from torchvision.transforms import ToTensor
 from torchvision.transforms.v2 import Resize
 from torchvision.transforms import CenterCrop
 
+import matplotlib.pyplot as plt
+
 # Setup device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -22,10 +24,10 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 INPUT_CHANNELS      = 3
 OUTPUT_CHANNELS     = 34
 BATCH_SIZE          = 4
-EPOCHS              = 1
+EPOCHS              = 20
 H                   = 128
 W                   = 256
-SAVE_MODEL          = False
+SAVE_MODEL          = True
 SAVE_MODEL_PATH     = "./model_params/UNET_params.pth"
 
 # Calculate accuracy (a classification metric)
@@ -102,6 +104,8 @@ def train_step(model: torch.nn.Module,
     train_acc /= len(data_loader)
     logging.info(f"Train loss: {train_loss:.5f} | Train accuracy: {train_acc:.2f}%")
 
+    return train_loss, train_acc
+
 def test_step(data_loader: torch.utils.data.DataLoader,
               model: torch.nn.Module,
               loss_fn: torch.nn.Module,
@@ -141,7 +145,9 @@ def test_step(data_loader: torch.utils.data.DataLoader,
         # Adjust metrics and print out
         test_loss /= len(data_loader)
         test_acc /= len(data_loader)
-        print(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+        logging.info(f"Test loss: {test_loss:.5f} | Test accuracy: {test_acc:.2f}%\n")
+
+        return test_loss, test_acc
 
 def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
@@ -207,24 +213,53 @@ def main():
     optimizer = torch.optim.SGD(params=model.parameters(), 
                                 lr=0.1)
     
+    train_losses = []
+    train_accuracies = []
+    test_losses = []
+    test_accuracies = []
+
     epochs = EPOCHS
     for epoch in tqdm(range(epochs)):
         logging.info(f"Epoch: {epoch}\n---------")
-        train_step(model=model,
-                   data_loader=train_dataloader,  
-                   loss_fn=loss_fn,
-                   optimizer=optimizer,
-                   accuracy_fn=accuracy_fn)
-        
-        test_step(model=model,
-                  data_loader=val_dataloader,
-                  loss_fn=loss_fn,
-                  accuracy_fn=accuracy_fn)
+        train_loss, train_acc = train_step(model=model,
+                                           data_loader=train_dataloader,
+                                           loss_fn=loss_fn,
+                                           optimizer=optimizer,
+                                           accuracy_fn=accuracy_fn)
+    
+        train_loss = train_loss.cpu()
 
+        train_losses.append(train_loss)
+        train_accuracies.append(train_acc)
+        
+        test_loss, test_acc = test_step(model=model,
+                                        data_loader=val_dataloader,
+                                        loss_fn=loss_fn,
+                                        accuracy_fn=accuracy_fn)
+        
+        test_loss = test_loss.cpu()
+        
+        test_losses.append(test_loss)
+        test_accuracies.append(test_acc)
+
+    ## Save model parameters
     if SAVE_MODEL is True:
         logging.info(f"Saving model parameters to: '{SAVE_MODEL_PATH}'")
         torch.save(obj=model.state_dict(),
                    f=SAVE_MODEL_PATH)
+        
+    ## Plot results
+    plt.figure()
+    plt.plot(train_losses)
+    plt.plot(test_losses)
+    plt.title("Train & Test Loss wrt Epochs")
+
+    plt.figure()
+    plt.plot(train_accuracies)
+    plt.plot(test_accuracies)
+    plt.title("Train & Test Accuracy wrt Epochs")
+
+    plt.show()
 
     logging.debug("--- main() completed. ---")
 
