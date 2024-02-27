@@ -12,6 +12,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.datasets import Cityscapes
 import torchvision.transforms.v2 as TF
+from torchvision.transforms.v2 import InterpolationMode
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -39,8 +40,9 @@ def main():
                                           height=H,
                                           width=W,
                                           w2h_ratio=W/H,
-                                          p=0.5),
-                        A.Resize(H, W, p=0.5),
+                                          p=0.5,
+                                          interpolation=3),
+                        A.Resize(H, W, p=0.5, interpolation=3),
                     ],
                     p=1.0
                 ),
@@ -57,7 +59,7 @@ def main():
 
         val_transform = A.Compose(
             [
-                A.Resize(H, W),
+                A.Resize(H, W, interpolation=3),
                 # A.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225)),
                 ToTensorV2(),
             ]
@@ -93,20 +95,29 @@ def main():
             TF.ToTensor()
         ])
 
+        # Transform pipeline for target masks (both training and validation)
+        target_transform = TF.Compose(
+            [
+                TF.Resize(size=(H, W),
+                          interpolation=InterpolationMode.NEAREST_EXACT),
+                utils.PILToLongTensor()
+            ]
+        )
+
         ## Load training and validation dataset
         train_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
                                 split="train",
                                 mode="fine",
                                 target_type="semantic",
                                 transform=data_transform_augmentation,
-                                target_transform=utils.PILToLongTensor())
+                                target_transform=target_transform)
         
         val_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
                             split="val",
                             mode="fine",
                             target_type="semantic",
                             transform=test_transform,
-                            target_transform=utils.PILToLongTensor())
+                            target_transform=target_transform)
     
     logging.info(f"Number of training data: {len(train_data)}")
     logging.info(f"train images: {len(train_data.images)}")
@@ -123,7 +134,7 @@ def main():
     K = 5
     
     # Fix random seed so that we retrieve always the same images 
-    # random.seed(42)
+    random.seed(42)
     # for ii in random.sample(range(len(train_data)), k=5):
     for ii in range(K):
         img_sample, smnt_sample = train_data[ii]

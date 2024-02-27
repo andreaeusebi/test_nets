@@ -19,6 +19,7 @@ from torchvision.transforms import ToTensor
 from torchvision.transforms.v2 import Resize
 from torchvision.transforms.v2 import Compose
 from torchvision.transforms.v2 import TrivialAugmentWide
+from torchvision.transforms.v2 import InterpolationMode
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -229,7 +230,9 @@ def main():
         # Transform pipeline for target masks (both training and validation)
         target_transform = Compose(
             [
-                Resize(size=(H, W), antialias=False),
+                Resize(size=(H, W),
+                       interpolation=InterpolationMode.NEAREST_EXACT,
+                       antialias=False),
                 utils.PILToLongTensor()
             ]
         )
