@@ -1,10 +1,14 @@
+import signal as sg
+sg.signal(sg.SIGINT, sg.SIG_DFL)
 
 # from euse_unet import EuseUnet
 from model import UNET
 import utils
-import datasets.cityscapes_dataset as cityscapes_dataset
+
+from datasets.CustomCityscapesDataset import CustomCityscapesDataset
 
 import logging
+import matplotlib.pyplot as plt
 from tqdm.auto import tqdm
 
 import torch
@@ -13,9 +17,11 @@ from torch.utils.data import DataLoader
 from torchvision.datasets import Cityscapes
 from torchvision.transforms import ToTensor
 from torchvision.transforms.v2 import Resize
-from torchvision.transforms import CenterCrop
+from torchvision.transforms.v2 import Compose
+from torchvision.transforms.v2 import TrivialAugmentWide
 
-import matplotlib.pyplot as plt
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
 
 # Setup device agnostic code
 device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -29,6 +35,8 @@ H                   = 128
 W                   = 256
 SAVE_MODEL          = True
 SAVE_MODEL_PATH     = "./model_params/UNET_params.pth"
+USE_CUSTOM          = True
+DATASET_PATH        = "/home/andrea/datasets/cityscapes"
 
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
@@ -68,14 +76,12 @@ def train_step(model: torch.nn.Module,
 
     for batch, (X, y) in tqdm(enumerate(data_loader)):
         logging.debug(f"--- Beginning of batch {batch}. ---")        
-        ## Resize image to to the requested shape by Unet
-        ## Disable antialiasing since it smooths edges (it adds ficticious classes
-        ## at the borders of different labels)
-        
-        # [N x channels x H x W]
-        X = Resize(size=(H, W), antialias=False)(X)
-        # [N x 1 x H x W] -> [N x H x W]
-        y = Resize(size=(H, W), antialias=False)(y).squeeze(dim=1)
+
+        X = X.to(torch.float32)
+        y = y.to(torch.int64)
+
+        if y.dim() == 4:
+            y = y.squeeze(dim=1)   
 
         # Send data to GPU
         X, y = X.to(device), y.to(device)
@@ -121,14 +127,12 @@ def test_step(data_loader: torch.utils.data.DataLoader,
     # Turn on inference context manager
     with torch.inference_mode(): 
         for X, y in data_loader:
-            ## Resize image to to the requested shape by Unet
-            ## Disable antialiasing since it smooths edges (it adds ficticious classes
-            ## at the borders of different labels)
+            
+            X = X.to(torch.float32)
+            y = y.to(torch.int64)
 
-            # [N x channels x H x W]
-            X = Resize(size=(H, W), antialias=False)(X)
-            # [N x 1 x H x W] -> [N x H x W]
-            y = Resize(size=(H, W), antialias=False)(y).squeeze(dim=1)
+            if y.dim() == 4:
+                y = y.squeeze(dim=1)
 
             # Send data to GPU
             X, y = X.to(device), y.to(device)
@@ -155,20 +159,99 @@ def main():
 
     logging.debug("--- main() started. ---")
 
-    ## 1. Load training and validation dataset
-    train_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
-                            split="train",
+    ## Use custom Cityscapes dataset
+    if USE_CUSTOM is True:
+        train_transform = A.Compose(
+            [
+                A.OneOf(
+                    [
+                        A.RandomSizedCrop(min_max_height=(H*2, 1024/2),
+                                          height=H,
+                                          width=W,
+                                          w2h_ratio=W/H,
+                                          p=0.5),
+                        A.Resize(H, W, p=0.5),
+                    ],
+                    p=1.0
+                ),
+                A.HorizontalFlip(p=0.25),
+                A.RGBShift(r_shift_limit=20, g_shift_limit=20, b_shift_limit=20, p=0.15),
+                A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.2),
+                ToTensorV2(),
+            ]
+        )
+
+        val_transform = A.Compose(
+            [
+                A.Resize(H, W),
+                ToTensorV2(),
+            ]
+        )
+
+        train_data = CustomCityscapesDataset(
+            root=DATASET_PATH,
+            split="train",
+            transform=train_transform)
+
+        val_data = CustomCityscapesDataset(
+            root=DATASET_PATH,
+            split="val",
+            transform=val_transform)
+        
+    else: ## Use default Cityscapes dataset 
+        # Transform pipeline for training images
+        train_img_transform = Compose(
+            [
+                ## Disable antialiasing since it smooths edges (it adds ficticious classes
+                ## at the borders of different labels)
+                Resize(size=(H, W), antialias=False),
+
+                # Transforms using random transforms from a given list with random strength number.
+                TrivialAugmentWide(num_magnitude_bins=31), # how intense
+
+                # Turn the image into a torch.Tensor
+                # this also converts all pixel values from 0 to 255 to 0.0 and 1.0
+                ToTensor()
+            ]
+        )
+
+        # Transform pipeline for validation images
+        val_img_transform = Compose(
+            [
+                Resize(size=(H, W), antialias=False),
+
+                # Turn the image into a torch.Tensor
+                # this also converts all pixel values from 0 to 255 to 0.0 and 1.0
+                ToTensor()
+            ]
+        )
+
+        # Transform pipeline for target masks (both training and validation)
+        target_transform = Compose(
+            [
+                Resize(size=(H, W), antialias=False),
+                utils.PILToLongTensor()
+            ]
+        )
+
+        ## 1. Load training and validation dataset
+        train_data = Cityscapes(root=DATASET_PATH,
+                                split="train",
+                                mode="fine",
+                                target_type="semantic",
+                                transform=train_img_transform,
+                                # transform=ToTensor(),
+                                # target_transform=utils.PILToLongTensor())
+                                target_transform=target_transform)
+        
+        val_data = Cityscapes(root=DATASET_PATH,
+                            split="val",
                             mode="fine",
                             target_type="semantic",
-                            transform=ToTensor(),
-                            target_transform=utils.PILToLongTensor())
-    
-    val_data = Cityscapes(root="/home/andrea/datasets/cityscapes",
-                          split="val",
-                          mode="fine",
-                          target_type="semantic",
-                          transform=ToTensor(),
-                          target_transform=utils.PILToLongTensor())
+                            transform=val_img_transform,
+                            # transform=ToTensor(),
+                            # target_transform=utils.PILToLongTensor())
+                            target_transform=target_transform)
     
     logging.info(f"train images: {len(train_data.images)}")
     logging.info(f"train targets: {len(train_data.targets)}")
@@ -188,7 +271,7 @@ def main():
     
     val_dataloader = DataLoader(val_data,
                                 batch_size=BATCH_SIZE,
-                                shuffle=True)
+                                shuffle=False)
     
     # Let's check out what we've created
     logging.info(f"Length of train dataloader: {len(train_dataloader)} batches of {BATCH_SIZE}")
@@ -250,14 +333,18 @@ def main():
         
     ## Plot results
     plt.figure()
-    plt.plot(train_losses)
-    plt.plot(test_losses)
+    plt.plot(train_losses, label="Train loss")
+    plt.plot(test_losses, label="Test loss")
     plt.title("Train & Test Loss wrt Epochs")
+    plt.xticks(range(EPOCHS))
+    plt.legend()
 
     plt.figure()
-    plt.plot(train_accuracies)
-    plt.plot(test_accuracies)
+    plt.plot(train_accuracies, label="Train accuracy")
+    plt.plot(test_accuracies, label="Test accuracy")
     plt.title("Train & Test Accuracy wrt Epochs")
+    plt.xticks(range(EPOCHS))
+    plt.legend()
 
     plt.show()
 
