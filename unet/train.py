@@ -170,8 +170,9 @@ def main():
                                           height=H,
                                           width=W,
                                           w2h_ratio=W/H,
-                                          p=0.5),
-                        A.Resize(H, W, p=0.5),
+                                          p=0.5,
+                                          interpolation=3),
+                        A.Resize(H, W, p=0.5, interpolation=3),
                     ],
                     p=1.0
                 ),
@@ -184,7 +185,7 @@ def main():
 
         val_transform = A.Compose(
             [
-                A.Resize(H, W),
+                A.Resize(H, W, interpolation=3),
                 ToTensorV2(),
             ]
         )
