@@ -5,7 +5,11 @@ sg.signal(sg.SIGINT, sg.SIG_DFL)
 from model import UNET
 import utils
 
-from datasets.CustomCityscapesDataset import CustomCityscapesDataset
+REDUCED = True
+if REDUCED is True:
+    from datasets.ReducedCityscapesDataset import ReducedCityscapesDataset as Dataset
+else:
+    from datasets.CustomCityscapesDataset import CustomCityscapesDataset as Dataset
 
 import logging
 import matplotlib.pyplot as plt
@@ -190,12 +194,12 @@ def main():
             ]
         )
 
-        train_data = CustomCityscapesDataset(
+        train_data = Dataset(
             root=DATASET_PATH,
             split="train",
             transform=train_transform)
 
-        val_data = CustomCityscapesDataset(
+        val_data = Dataset(
             root=DATASET_PATH,
             split="val",
             transform=val_transform)

@@ -1,15 +1,17 @@
 import signal as sg
 sg.signal(sg.SIGINT, sg.SIG_DFL)
 
+import sys 
+sys.path.insert(0, "./../" )
+
 from collections import namedtuple
 from typing import Any, Optional, Callable, Tuple
 
-from CustomCityscapesDataset import CustomCityscapesDataset
-import cityscapes_dataset
+# from CustomCityscapesDataset import CustomCityscapesDataset
+from unet.datasets.CustomCityscapesDataset import CustomCityscapesDataset
+from unet.datasets import cityscapes_dataset
 
-import sys 
-sys.path.insert(0, "./../" )
-import utils
+import unet.utils
 
 Label = namedtuple( "Label", [
     "name"          ,
@@ -81,8 +83,8 @@ if __name__ == "__main__":
         img_orig, mask_orig = ds_orig[img_idx]
         img_red, mask_red = ds_reduced[img_idx]
 
-        mask_orig_color = utils.labelToMask(mask_orig, cityscapes_dataset.PALETTE)
-        mask_red_color = utils.labelToMask(mask_red, PALETTE)
+        mask_orig_color = unet.utils.labelToMask(mask_orig, cityscapes_dataset.PALETTE)
+        mask_red_color = unet.utils.labelToMask(mask_red, PALETTE)
 
         fig = plt.figure()
             
