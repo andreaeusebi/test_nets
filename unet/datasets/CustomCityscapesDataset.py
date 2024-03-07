@@ -3,6 +3,7 @@ import logging
 from typing import Optional, Callable, Tuple, Any
 from PIL import Image
 import numpy as np
+from pathlib import Path
 
 from torch.utils.data import Dataset
 
@@ -15,13 +16,18 @@ class CustomCityscapesDataset(Dataset):
     def __init__(self,
                  root: str,
                  split: str = "train",
-                 transform: Optional[Callable] =None) -> None:
+                 transform: Optional[Callable] = None) -> None:
         super().__init__()
+
+        assert split in ["train", "val"]
 
         self.root = root
         self.images_dir = os.path.join(self.root, "leftImg8bit", split)
         self.targets_dir = os.path.join(self.root, "gtFine", split)
         self.transform = transform
+
+        assert(Path(self.images_dir).exists())
+        assert(Path(self.targets_dir).exists())
 
         self.images = []
         self.targets = []
@@ -39,11 +45,15 @@ class CustomCityscapesDataset(Dataset):
                 
                 logging.debug(img_file_path)
 
+                assert(Path(img_file_path).exists())
+
                 target_name = "{}_{}".format(file_name.split("_leftImg8bit")[0], 
                                              "gtFine_labelIds.png")
                 
                 target_file_path = os.path.join(target_dir, target_name)
                 logging.debug(target_file_path)
+
+                assert(Path(target_file_path).exists())
 
                 self.images.append(img_file_path)
                 self.targets.append(target_file_path)
@@ -101,6 +111,9 @@ def test():
         transform=data_transform)
     
     logging.info(len(custom_cityscapes_dataset))
+
+    assert (len(custom_cityscapes_dataset.images) ==
+            len(custom_cityscapes_dataset.targets))
 
     img_sample, smnt_sample = custom_cityscapes_dataset[0]
 
