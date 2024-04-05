@@ -24,10 +24,10 @@ from albumentations.pytorch import ToTensorV2
 
 ##### --- Params --- #####
 
-H = 256
-W = 512
+H = 128
+W = 256
 K = 5       ## number of images on which testing inference
-MODEL_PATH = "./model_params/UNET_params_240229_512w_50ep_album_REDUCED.pth"
+MODEL_PATH = "./model_params/UNET_params_240403_256w_34classes_to5_cs_20ep.pth"
 
 ##########################
 

@@ -16,5 +16,5 @@ C                   = 3
 
 NUM_CLASSES         = 19
 
-INPUT_IMG_PATH      = ("/home/andrea/datasets/label_studio/tmhmi_semantic_segmentation/images/"
-                       "seq_01_frame000008_rgb.png")
+INPUT_IMG_PATH      = ("/home/andrea/phoenix_ws/src/phoenix_image_segmentation_pkg/"
+                       "frame0000.jpg")

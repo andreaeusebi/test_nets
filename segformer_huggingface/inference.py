@@ -29,9 +29,7 @@ def cs_palette():
             [119, 11, 32]  # 18
            ]
 
-SAVE_MODEL          = True
-MODEL_PATH          = ("/home/andrea/personal_projects/test_nets/segformer_huggingface/weights/"
-                       "segformer-b0-finetuned-cityscapes-1024-1024.pth")
+SAVE_MODEL          = False
 
 def main():
     model = SegformerForSemanticSegmentation.from_pretrained(config.MODEL_WEIGHTS)
@@ -41,7 +39,7 @@ def main():
         torch.save(obj=model.state_dict(),
                    f=config.PROJECT_DIR + config.WEIGTHS_FOLDER + config.MODEL_NAME)
 
-    processor = SegformerImageProcessor(do_resize=False)#(size= {"height": 512, "width": 1024})
+    processor = SegformerImageProcessor(do_resize=False, do_normalize=False)#(size= {"height": 512, "width": 1024})
 
     ## Load image
     image = Image.open(config.INPUT_IMG_PATH).convert("RGB")

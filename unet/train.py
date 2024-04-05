@@ -33,9 +33,9 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 ## Params
 INPUT_CHANNELS      = 3
-OUTPUT_CHANNELS     = 34
+OUTPUT_CHANNELS     = 5
 BATCH_SIZE          = 4
-EPOCHS              = 20
+EPOCHS              = 50
 H                   = 128
 W                   = 256
 SAVE_MODEL          = True
