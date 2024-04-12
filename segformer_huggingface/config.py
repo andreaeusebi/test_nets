@@ -35,22 +35,22 @@ LOGGING_LEVEL           = logging.INFO
 
 ##### ----- INPUT PARAMETERS ----- ######
 
-IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-1024-1024"
+IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
+
+H                       = 512
+W                       = 1024
+C                       = 3
+
+NUM_CLASSES             = 19
 
 ################################################
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "segformer-b0-finetuned-cityscapes-1024-1024.pth"
-OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-1024-1024"
+OUT_MODEL_NAME          = "segformer-b0-finetuned-cityscapes-512-1024.pth"
+OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################
 
 ##### ----- TRAINING PARAMETERS ----- ######
 ################################################
-
-H                   = 1080
-W                   = 1920
-C                   = 3
-
-NUM_CLASSES         = 19

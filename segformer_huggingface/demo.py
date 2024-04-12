@@ -57,7 +57,7 @@ def main():
                    f=config.PROJECT_DIR + config.WEIGTHS_FOLDER + config.MODEL_NAME)
 
     ## Setup image processor (for both pre and post processing of images)
-    processor = SegformerImageProcessor(do_resize=False)#(size= {"height": 512, "width": 1024})
+    processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
 
     ## Load image
     image = Image.open(args.image_fpath).convert("RGB")
