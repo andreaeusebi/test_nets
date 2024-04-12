@@ -18,12 +18,10 @@ EXAMPLE_INPUT = torch.randn(1, config.C, config.H, config.W, requires_grad=True,
 
 # Build model
 
-model = SegformerForSemanticSegmentation.from_pretrained(config.MODEL_WEIGHTS)
-
-model.load_state_dict(torch.load(f=config.PROJECT_DIR + config.WEIGTHS_FOLDER + config.MODEL_NAME))
+model = SegformerForSemanticSegmentation.from_pretrained(config.IN_MODEL_NAME)
 
 model.to(config.DEVICE)
 model.eval()
 
 # Compile and save model
-make_ONNX(model, config.PROJECT_DIR + config.WEIGTHS_FOLDER + config.ONNX_NAME, EXAMPLE_INPUT)
+make_ONNX(model, config.MODELS_DIR + config.OUT_ONNX_NAME, EXAMPLE_INPUT)

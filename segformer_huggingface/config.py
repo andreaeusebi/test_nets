@@ -1,20 +1,56 @@
+import os
+from pathlib import Path
+import logging
 import torch
 
-DEVICE              = "cuda" if torch.cuda.is_available() else "cpu"
+"""
+Project folders structure:
+project/
+    models/         Where models state dictionaries and onnx files are saved.
+    nets/           Contains networks implementation source code.
+    config.py
+    train.py
+    demo.py
+    demo.png
+"""
 
-PROJECT_DIR         = "/home/andrea/personal_projects/test_nets/segformer_huggingface/"
-WEIGTHS_FOLDER      = "weights/"
+##### ----- AUTOMATIC PARAMETERS ----- ######
 
-MODEL_WEIGHTS       = "nvidia/segformer-b0-finetuned-cityscapes-1024-1024"
+DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
+PROJECT_DIR             = str(Path(os.path.dirname(__file__)).absolute()) +  "/"
 
-MODEL_NAME          = "segformer-b0-finetuned-cityscapes-1024-1024.pth"
-ONNX_NAME           = "segformer-b0-finetuned-cityscapes-1024-1024"
+################################################
+
+##### ----- PATHS TO FILES & DIRECTORIES ----- ######
+
+MODELS_DIR              = PROJECT_DIR + "models/"
+
+################################################
+
+##### ----- GENERIC PARAMETERS ----- ######
+
+LOGGING_LEVEL           = logging.INFO
+
+################################################
+
+##### ----- INPUT PARAMETERS ----- ######
+
+IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-1024-1024"
+
+################################################
+
+##### ----- OUTPUT PARAMETERS ----- ######
+
+OUT_MODEL_NAME          = "segformer-b0-finetuned-cityscapes-1024-1024.pth"
+OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-1024-1024"
+
+################################################
+
+##### ----- TRAINING PARAMETERS ----- ######
+################################################
 
 H                   = 1080
 W                   = 1920
 C                   = 3
 
 NUM_CLASSES         = 19
-
-INPUT_IMG_PATH      = ("/home/andrea/phoenix_ws/src/phoenix_image_segmentation_pkg/"
-                       "frame0000.jpg")

@@ -3,6 +3,9 @@ from PIL import Image
 import matplotlib.pylab as plt
 import torch
 import numpy as np
+import argparse
+import logging
+from pathlib import Path
 
 import config
 
@@ -32,22 +35,37 @@ def cs_palette():
 SAVE_MODEL          = False
 
 def main():
-    model = SegformerForSemanticSegmentation.from_pretrained(config.MODEL_WEIGHTS)
+    logging.basicConfig(format="[demo.py][%(levelname)s]: %(message)s",
+					    level=config.LOGGING_LEVEL)
+    
+    ## Parse input arguments
+    parser=argparse.ArgumentParser(description="Run a SegFormer model on a given image.")
+    parser.add_argument("image_fpath", nargs='?', default="./demo.png")
+
+    args=parser.parse_args()
+
+    logging.debug(f"Input image: {args.image_fpath}")
+
+    assert(Path(args.image_fpath).exists())
+
+    ## Load the model
+    model = SegformerForSemanticSegmentation.from_pretrained(config.IN_MODEL_NAME)
     model.to(config.DEVICE)
 
     if SAVE_MODEL:
         torch.save(obj=model.state_dict(),
                    f=config.PROJECT_DIR + config.WEIGTHS_FOLDER + config.MODEL_NAME)
 
-    processor = SegformerImageProcessor(do_resize=False, do_normalize=False)#(size= {"height": 512, "width": 1024})
+    ## Setup image processor (for both pre and post processing of images)
+    processor = SegformerImageProcessor(do_resize=False)#(size= {"height": 512, "width": 1024})
 
     ## Load image
-    image = Image.open(config.INPUT_IMG_PATH).convert("RGB")
+    image = Image.open(args.image_fpath).convert("RGB")
     
     ## Preprocess the image (resize + normalize)
     pixel_values = processor(image, return_tensors="pt").pixel_values.to(config.DEVICE)
 
-    print(f"pixel_values.shape: {pixel_values.shape}")
+    logging.info(f"pixel_values.shape: {pixel_values.shape}")
 
     ## Forward pass
     with torch.no_grad():
@@ -55,7 +73,7 @@ def main():
         logits = outputs.logits
 
     # The model outputs logits of shape (batch_size, num_labels, height/4, width/4)
-    print(f"logits.shape: {logits.shape}")
+    logging.info(f"logits.shape: {logits.shape}")
 
     ## Rescale logit to match image original and perform argmax
     predicted_segmentation_map = processor.post_process_semantic_segmentation(
@@ -63,7 +81,7 @@ def main():
         target_sizes=[image.size[::-1]]
     )[0]
 
-    print(f"predicted_segmentation_map.shape: {predicted_segmentation_map.shape}")
+    logging.info(f"predicted_segmentation_map.shape: {predicted_segmentation_map.shape}")
     
     predicted_segmentation_map = predicted_segmentation_map.cpu().numpy()
 
@@ -78,15 +96,6 @@ def main():
     for label, color in enumerate(palette):
         color_seg[predicted_segmentation_map == label, :] = color
     
-    ## Show original image and corresponding coloured prediction
-    fig = plt.figure()
-    
-    fig.add_subplot(1, 2, 1)
-    plt.imshow(image)
-
-    fig.add_subplot(1, 2, 2)
-    plt.imshow(color_seg)
-
     ## Show image overlapped with colour mask
     img = np.array(image) * 0.5 + color_seg * 0.5
     img = img.astype(np.uint8)
