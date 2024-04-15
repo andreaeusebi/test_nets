@@ -32,8 +32,6 @@ def cs_palette():
             [119, 11, 32]  # 18
            ]
 
-SAVE_MODEL          = False
-
 def main():
     logging.basicConfig(format="[demo.py][%(levelname)s]: %(message)s",
 					    level=config.LOGGING_LEVEL)
@@ -51,10 +49,6 @@ def main():
     ## Load the model
     model = SegformerForSemanticSegmentation.from_pretrained(config.IN_MODEL_NAME)
     model.to(config.DEVICE)
-
-    if SAVE_MODEL:
-        torch.save(obj=model.state_dict(),
-                   f=config.PROJECT_DIR + config.WEIGTHS_FOLDER + config.MODEL_NAME)
 
     ## Setup image processor (for both pre and post processing of images)
     processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
