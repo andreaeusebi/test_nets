@@ -33,9 +33,19 @@ LOGGING_LEVEL           = logging.INFO
 
 ################################################
 
+##### ----- DATASET PARAMETERS ----- ######
+
+SEGMENTS_API_KEY        = "e6eb70a8f4cd51d900b5ca6a0fcbb504070b5307"
+SEGMENTS_USERNAME       = "andrea_eusebi"
+DATASET_ID              = "TMHMI_Semantic_Dataset"
+RELEASE_NAME            = "v0.1"
+HF_USERNAME             = "eusandre95"
+
+################################################
+
 ##### ----- INPUT PARAMETERS ----- ######
 
-IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
+IN_MODEL_NAME           = "nvidia/mit-b0"
 
 H                       = 512
 W                       = 1024
@@ -47,7 +57,7 @@ NUM_CLASSES             = 19
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "segformer-b0-finetuned-cityscapes-512-1024.pth"
+OUT_MODEL_NAME          = "240417-segformer-b0-finetuned-tmhmi-512-512"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################

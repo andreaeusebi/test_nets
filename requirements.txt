@@ -1,0 +1,7 @@
+torch
+transformers
+datasets
+segments-ai
+scikit-image
+evaluate
+accelerate>=0.21.0
