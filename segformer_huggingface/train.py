@@ -64,7 +64,8 @@ def compute_metrics(eval_pred):
 
 def tmhmi_palette():
     """Cityscapes palette that maps each class to RGB values."""
-    return [[128, 64,128], #  0 
+    return [#               train_id
+            [128, 64,128], #  0 
             [244, 35,232], #  1
             [ 70, 70, 70], #  2
             [102,102,156], #  3
@@ -87,8 +88,7 @@ def tmhmi_palette():
             [ 81,  0, 81], # 20
             [250,170,160], # 21
             [111, 74,  0], # 22
-            [ 35, 35, 35], # 23
-            [  0,  0,  0] # 255
+            [ 35, 35, 35]  # 23
            ]
 
 def get_seg_overlay(image, seg):
@@ -108,7 +108,7 @@ def main():
 					    level=config.LOGGING_LEVEL)
     
     # Login to Huggingface
-    login("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")
+    login(config.HF_TOKEN)
     
     ## Loading and preparing the dataset ##
 
@@ -150,7 +150,7 @@ def main():
 
     ## Image processor & data augmentation ##
     global processor
-    processor = SegformerImageProcessor()
+    processor = SegformerImageProcessor(do_reduce_labels=True)
 
     # Set transforms
     train_ds.set_transform(train_transforms)
@@ -166,7 +166,7 @@ def main():
 
     ## Set up the Trainer ##
 
-    epochs = 100
+    epochs = 300
     lr = 0.00006
     batch_size = 2
 
@@ -211,35 +211,17 @@ def main():
     processor.push_to_hub(hub_model_id, private=True)
     trainer.push_to_hub(**kwargs)
 
-    exit()
 
     ## Test inference
-    # ds = load_dataset(f"{config.HF_USERNAME}/{config.DATASET_ID}")
-
-    # ds = ds.shuffle(seed=1)
-    # ds = ds["train"].train_test_split(test_size=0.2)
-    # train_ds = ds["train"]
-    # test_ds = ds["test"]
-
-    # print(f"test_ds: {test_ds}")
-    # print(f"test_ds[0]: {test_ds[0]}")
-    # print(f"img: {test_ds[0]['pixel_values']}")
-    # print(f"img type: {type(test_ds[0]['pixel_values'])}")
-    # print(f"label: {test_ds[0]['label']}")
-    # print(f"label type: {type(test_ds[0]['label'])}")
-
-    # image = test_ds[0]['pixel_values']
-    # gt_seg = test_ds[0]['label']
-
     from PIL import Image
     image = Image.open(("/home/andrea/my_projects/test_nets/segformer_huggingface/segments/"
                         "andrea_eusebi_TMHMI_Semantic_Dataset/v0.1/seq_04_frame000000_rgb.png")).convert("RGB")
-
-    processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
-    
+   
     inputs = processor(images=image, return_tensors="pt").to(config.DEVICE)
     outputs = model(**inputs)
     logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
+
+    print(f"logits.shape: {logits.shape}")
 
     # First, rescale logits to original image size
     upsampled_logits = nn.functional.interpolate(
