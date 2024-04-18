@@ -3,6 +3,8 @@ from pathlib import Path
 import logging
 import torch
 
+from palettes import getPaletteFunction
+
 """
 Project folders structure:
 project/
@@ -46,7 +48,11 @@ HF_TOKEN                = "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"
 
 ##### ----- INPUT PARAMETERS ----- ######
 
-IN_MODEL_NAME           = "nvidia/mit-b0"
+# DATASET = ["Cityscapes", "TMHMI"]
+DATASET                 = "Cityscapes"
+PALETTE_FUNCTION        = getPaletteFunction(DATASET)
+
+IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
 
 H                       = 512
 W                       = 1024
