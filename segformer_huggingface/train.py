@@ -2,7 +2,7 @@
 import signal as sg
 sg.signal(sg.SIGINT, sg.SIG_DFL)
 
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 from huggingface_hub import hf_hub_download, login
 from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
 from transformers import TrainingArguments
@@ -15,8 +15,10 @@ import json
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
 
 import config
+import utils
 
 metric = evaluate.load("mean_iou")
 
@@ -62,38 +64,9 @@ def compute_metrics(eval_pred):
 
     return metrics
 
-def tmhmi_palette():
-    """Cityscapes palette that maps each class to RGB values."""
-    return [#               train_id
-            [128, 64,128], #  0 
-            [244, 35,232], #  1
-            [ 70, 70, 70], #  2
-            [102,102,156], #  3
-            [190,153,153], #  4
-            [153,153,153], #  5
-            [250,170, 30], #  6
-            [220,220,  0], #  7
-            [107,142, 35], #  8
-            [152,251,152], #  9
-            [ 70,130,180], # 10
-            [220, 20, 60], # 11
-            [255,  0,  0], # 12
-            [  0,  0,142], # 13
-            [  0,  0, 70], # 14
-            [  0, 60,100], # 15
-            [220,220,220], # 16
-            [  0,  0,230], # 17
-            [ 80,227,194], # 18
-            [248,248, 28], # 19
-            [ 81,  0, 81], # 20
-            [250,170,160], # 21
-            [111, 74,  0], # 22
-            [ 35, 35, 35]  # 23
-           ]
-
 def get_seg_overlay(image, seg):
     color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8) # height, width, 3
-    palette = np.array(tmhmi_palette())
+    palette = np.array(config.PALETTE_FUNCTION())
     for label, color in enumerate(palette):
         color_seg[seg == label, :] = color
 
@@ -102,7 +75,54 @@ def get_seg_overlay(image, seg):
     img = img.astype(np.uint8)
 
     return img
-  
+
+cs_to_tmhmi_mapping = {
+# CS_ID   TMHMI_ID
+    0:       0,
+    1:       0,
+    2:       0,
+    3:       0,
+    4:       0,
+    5:      23,
+    6:       0,
+    7:       1,
+    8:       2,
+    9:       0,
+   10:       0,
+   11:       3,
+   12:       4,
+   13:       5,
+   14:       0,
+   15:       0,
+   16:       0,
+   17:       6,
+   18:       0,
+   19:       7,
+   20:       8,
+   21:       9,
+   22:      10,
+   23:      11,
+   24:      12,
+   25:      13,
+   26:      14,
+   27:      15,
+   28:      16,
+   29:      15,
+   30:      15,
+   31:       0,
+   32:      18,
+   33:       0,
+}
+
+def remapCStoTMHMILabels(example):
+    orig_bitmap = np.array(example["label"])
+
+    remapped_bitmap = utils.remapLabels(orig_bitmap, cs_to_tmhmi_mapping)
+
+    return {
+        "label": Image.fromarray(remapped_bitmap, mode="L")
+    }
+
 def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
 					    level=config.LOGGING_LEVEL)
@@ -119,15 +139,53 @@ def main():
     train_ds = ds["train"]
     test_ds = ds["test"]
 
-    logging.info(f"test_ds: {test_ds}")
-    logging.info(f"test_ds[0]: {test_ds[0]}")
-    logging.info(f"img: {test_ds[0]['pixel_values']}")
-    logging.info(f"img type: {type(test_ds[0]['pixel_values'])}")
-    logging.info(f"label: {test_ds[0]['label']}")
-    logging.info(f"label type: {type(test_ds[0]['label'])}")
-
+    logging.info(f"##### ----- TMHMI dataset: {ds}")
+    # logging.info(f"Test dataset: {test_ds}")
+    logging.info(f"##### ----- First row: {train_ds[0]}")
+    # logging.info(f"img: {test_ds[0]['pixel_values']}")
+    # logging.info(f"img type: {type(test_ds[0]['pixel_values'])}")
+    # logging.info(f"label: {test_ds[0]['label']}")
+    # logging.info(f"label type: {type(test_ds[0]['label'])}")
+     
     logging.info(f"Lenght of training dataset: {len(train_ds)}")
     logging.info(f"Lenght of testing dataset: {len(test_ds)}")
+
+    train_ds_cs = load_dataset("Antreas/Cityscapes", split="train")
+    valid_ds_cs = load_dataset("Antreas/Cityscapes", split="val")
+    # train_ds_cs = load_dataset("/home/andrea/.cache/huggingface/datasets/Antreas___cityscapes/default/0.0.0/25f5ec2398eaf27d79bca00c21e269a4d6784286", split="train")
+    # valid_ds_cs = load_dataset("/home/andrea/.cache/huggingface/datasets/Antreas___cityscapes/default/0.0.0/25f5ec2398eaf27d79bca00c21e269a4d6784286", split="validation")
+
+    train_ds_cs = train_ds_cs.rename_column("image", "pixel_values")
+    train_ds_cs = train_ds_cs.rename_column("semantic_segmentation", "label")
+
+    valid_ds_cs = valid_ds_cs.rename_column("image", "pixel_values")
+    valid_ds_cs = valid_ds_cs.rename_column("semantic_segmentation", "label")
+
+    logging.info(f"##### ----- Cityscapes dataset [train]: {train_ds_cs}")
+    logging.info(f"##### ----- First row [train]: {train_ds_cs[0]}")
+
+    logging.info(f"##### ----- Cityscapes dataset [valid]: {valid_ds_cs}")
+    logging.info(f"##### ----- First row [valid]: {valid_ds_cs[0]}")
+
+    # sem_bitmap = np.array(valid_ds_cs[1]["label"])
+
+    # logging.info(f"##### ----- MAX: {np.max(sem_bitmap)}")
+
+    train_ds_cs = train_ds_cs.map(remapCStoTMHMILabels, writer_batch_size=100, num_proc=8)
+    valid_ds_cs = valid_ds_cs.map(remapCStoTMHMILabels, num_proc=8)
+
+    logging.info(f"##### ----- Cityscapes dataset [valid]: {valid_ds_cs}")
+    logging.info(f"##### ----- First row: {valid_ds_cs[0]}")
+
+    # sem_bitmap = np.array(valid_ds_cs[1]["label"])
+
+    # logging.info(f"##### ----- MAX: {np.max(sem_bitmap)}")
+
+    train_ds_concat = concatenate_datasets([train_ds, train_ds_cs])
+    valid_ds_concat = concatenate_datasets([test_ds, valid_ds_cs])
+
+    logging.info(f"##### ----- Concat dataset [train]: {train_ds_concat}")
+    logging.info(f"##### ----- Concat dataset [valid]: {valid_ds_concat}")
 
     global id2label
 
@@ -153,8 +211,8 @@ def main():
     processor = SegformerImageProcessor(do_reduce_labels=True)
 
     # Set transforms
-    train_ds.set_transform(train_transforms)
-    test_ds.set_transform(val_transforms)
+    train_ds_concat.set_transform(train_transforms)
+    valid_ds_concat.set_transform(val_transforms)
 
     ## Fine-tune a SegFormer model ##
     
@@ -195,8 +253,8 @@ def main():
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=test_ds,
+        train_dataset=train_ds_concat,
+        eval_dataset=valid_ds_concat,
         compute_metrics=compute_metrics,
     )
 
@@ -210,7 +268,6 @@ def main():
     
     processor.push_to_hub(hub_model_id, private=True)
     trainer.push_to_hub(**kwargs)
-
 
     ## Test inference
     from PIL import Image

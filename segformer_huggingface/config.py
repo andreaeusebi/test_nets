@@ -40,7 +40,7 @@ LOGGING_LEVEL           = logging.INFO
 SEGMENTS_API_KEY        = "e6eb70a8f4cd51d900b5ca6a0fcbb504070b5307"
 SEGMENTS_USERNAME       = "andrea_eusebi"
 DATASET_ID              = "TMHMI_Semantic_Dataset"
-DATASET_RELEASE         = "v0.5"
+DATASET_RELEASE         = "v0.6"
 HF_USERNAME             = "eusandre95"
 HF_TOKEN                = "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"
 
@@ -49,13 +49,13 @@ HF_TOKEN                = "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"
 ##### ----- INPUT PARAMETERS ----- ######
 
 # DATASET = ["Cityscapes", "TMHMI"]
-DATASET                 = "Cityscapes"
+DATASET                 = "TMHMI"
 PALETTE_FUNCTION        = getPaletteFunction(DATASET)
 
-IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
+IN_MODEL_NAME           = "nvidia/mit-b0"
 
 H                       = 512
-W                       = 1024
+W                       = 512
 C                       = 3
 
 NUM_CLASSES             = 19
@@ -64,7 +64,7 @@ NUM_CLASSES             = 19
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240418-segformer-b0-finetuned-tmhmi-512-512-300ep-24labels"
+OUT_MODEL_NAME          = "240422-segformer-b0-finetuned-tmhmi-cs-512-512-300ep-24labels"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################
