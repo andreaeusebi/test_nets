@@ -15,10 +15,9 @@ import json
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
-from PIL import Image
 
 import config
-import utils
+from dataset_utils.get_dataset import getHfDataset
 
 metric = evaluate.load("mean_iou")
 
@@ -51,8 +50,8 @@ def compute_metrics(eval_pred):
                 predictions=pred_labels,
                 references=labels,
                 num_labels=len(id2label),
-                ignore_index=0,
-                reduce_labels=processor.do_reduce_labels,
+                ignore_index=255,
+                reduce_labels=False, # we've already reduced the labels ourselves
             )
 
     # add per category metrics as individual key-value pairs
@@ -76,53 +75,6 @@ def get_seg_overlay(image, seg):
 
     return img
 
-cs_to_tmhmi_mapping = {
-# CS_ID   TMHMI_ID
-    0:       0,
-    1:       0,
-    2:       0,
-    3:       0,
-    4:       0,
-    5:      23,
-    6:       0,
-    7:       1,
-    8:       2,
-    9:       0,
-   10:       0,
-   11:       3,
-   12:       4,
-   13:       5,
-   14:       0,
-   15:       0,
-   16:       0,
-   17:       6,
-   18:       0,
-   19:       7,
-   20:       8,
-   21:       9,
-   22:      10,
-   23:      11,
-   24:      12,
-   25:      13,
-   26:      14,
-   27:      15,
-   28:      16,
-   29:      15,
-   30:      15,
-   31:       0,
-   32:      18,
-   33:       0,
-}
-
-def remapCStoTMHMILabels(example):
-    orig_bitmap = np.array(example["label"])
-
-    remapped_bitmap = utils.remapLabels(orig_bitmap, cs_to_tmhmi_mapping)
-
-    return {
-        "label": Image.fromarray(remapped_bitmap, mode="L")
-    }
-
 def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
 					    level=config.LOGGING_LEVEL)
@@ -130,72 +82,35 @@ def main():
     # Login to Huggingface
     login(config.HF_TOKEN)
     
-    ## Loading and preparing the dataset ##
+    ## Loading the dataset ##
 
-    ds = load_dataset(f"{config.HF_USERNAME}/{config.DATASET_ID}")
+    train_ds = getHfDataset(dataset_names_=["Cityscapes"], split_="train")
+    valid_ds = getHfDataset(dataset_names_=["Cityscapes"], split_="val")
 
-    ds = ds.shuffle(seed=1)
-    ds = ds["train"].train_test_split(test_size=0.2)
-    train_ds = ds["train"]
-    test_ds = ds["test"]
+    # ds = load_dataset(config.HF_DATASET)
 
-    logging.info(f"##### ----- TMHMI dataset: {ds}")
-    # logging.info(f"Test dataset: {test_ds}")
-    logging.info(f"##### ----- First row: {train_ds[0]}")
-    # logging.info(f"img: {test_ds[0]['pixel_values']}")
-    # logging.info(f"img type: {type(test_ds[0]['pixel_values'])}")
-    # logging.info(f"label: {test_ds[0]['label']}")
-    # logging.info(f"label type: {type(test_ds[0]['label'])}")
-     
-    logging.info(f"Lenght of training dataset: {len(train_ds)}")
-    logging.info(f"Lenght of testing dataset: {len(test_ds)}")
+    # ds = ds.shuffle(seed=1)
+    # ds = ds["train"].train_test_split(test_size=0.2)
+    # train_ds = ds["train"]
+    # test_ds = ds["test"]
 
-    train_ds_cs = load_dataset("Antreas/Cityscapes", split="train")
-    valid_ds_cs = load_dataset("Antreas/Cityscapes", split="val")
-    # train_ds_cs = load_dataset("/home/andrea/.cache/huggingface/datasets/Antreas___cityscapes/default/0.0.0/25f5ec2398eaf27d79bca00c21e269a4d6784286", split="train")
-    # valid_ds_cs = load_dataset("/home/andrea/.cache/huggingface/datasets/Antreas___cityscapes/default/0.0.0/25f5ec2398eaf27d79bca00c21e269a4d6784286", split="validation")
+    # train_ds_concat = concatenate_datasets([train_ds, train_ds_cs])
+    # valid_ds_concat = concatenate_datasets([test_ds, valid_ds_cs])
 
-    train_ds_cs = train_ds_cs.rename_column("image", "pixel_values")
-    train_ds_cs = train_ds_cs.rename_column("semantic_segmentation", "label")
-
-    valid_ds_cs = valid_ds_cs.rename_column("image", "pixel_values")
-    valid_ds_cs = valid_ds_cs.rename_column("semantic_segmentation", "label")
-
-    logging.info(f"##### ----- Cityscapes dataset [train]: {train_ds_cs}")
-    logging.info(f"##### ----- First row [train]: {train_ds_cs[0]}")
-
-    logging.info(f"##### ----- Cityscapes dataset [valid]: {valid_ds_cs}")
-    logging.info(f"##### ----- First row [valid]: {valid_ds_cs[0]}")
-
-    # sem_bitmap = np.array(valid_ds_cs[1]["label"])
-
-    # logging.info(f"##### ----- MAX: {np.max(sem_bitmap)}")
-
-    train_ds_cs = train_ds_cs.map(remapCStoTMHMILabels, writer_batch_size=100, num_proc=8)
-    valid_ds_cs = valid_ds_cs.map(remapCStoTMHMILabels, num_proc=8)
-
-    logging.info(f"##### ----- Cityscapes dataset [valid]: {valid_ds_cs}")
-    logging.info(f"##### ----- First row: {valid_ds_cs[0]}")
-
-    # sem_bitmap = np.array(valid_ds_cs[1]["label"])
-
-    # logging.info(f"##### ----- MAX: {np.max(sem_bitmap)}")
-
-    train_ds_concat = concatenate_datasets([train_ds, train_ds_cs])
-    valid_ds_concat = concatenate_datasets([test_ds, valid_ds_cs])
-
-    logging.info(f"##### ----- Concat dataset [train]: {train_ds_concat}")
-    logging.info(f"##### ----- Concat dataset [valid]: {valid_ds_concat}")
+    # logging.info(f"##### ----- Concat dataset [train]: {train_ds_concat}")
+    # logging.info(f"##### ----- Concat dataset [valid]: {valid_ds_concat}")
 
     global id2label
 
-    filename = "id2label.json"
-    id2label = json.load(
-        open(hf_hub_download(repo_id=f"{config.HF_USERNAME}/{config.DATASET_ID}",
-                             filename=filename,
-                             repo_type="dataset"),
-        "r")
-    )
+    filename = "dataset_utils/id2label_cityscapes.json"
+    # id2label = json.load(
+    #     open(hf_hub_download(repo_id=config.HF_DATASET,
+    #                          filename=filename,
+    #                          repo_type="dataset"),
+    #     "r")
+    # )
+
+    id2label = json.load(open(filename))
     
     id2label = {int(k): v for k, v in id2label.items()}
     label2id = {v: k for k, v in id2label.items()}
@@ -208,11 +123,12 @@ def main():
 
     ## Image processor & data augmentation ##
     global processor
-    processor = SegformerImageProcessor(do_reduce_labels=True)
+    # processor = SegformerImageProcessor(do_reduce_labels=True)
+    processor = SegformerImageProcessor()
 
     # Set transforms
-    train_ds_concat.set_transform(train_transforms)
-    valid_ds_concat.set_transform(val_transforms)
+    train_ds.set_transform(train_transforms)
+    valid_ds.set_transform(val_transforms)
 
     ## Fine-tune a SegFormer model ##
     
@@ -224,7 +140,7 @@ def main():
 
     ## Set up the Trainer ##
 
-    epochs = 300
+    epochs = 2
     lr = 0.00006
     batch_size = 2
 
@@ -237,24 +153,24 @@ def main():
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         save_total_limit=3,
-        evaluation_strategy="steps",
-        save_strategy="steps",
-        save_steps=20,
-        eval_steps=20,
+        evaluation_strategy="epoch",
+        save_strategy="epoch",
+        # save_steps=20,
+        # eval_steps=20,
         logging_steps=1,
         eval_accumulation_steps=5,
         load_best_model_at_end=True,
         push_to_hub=True,
         hub_model_id=hub_model_id,
-        hub_strategy="end",
+        hub_strategy="every_save",
         hub_private_repo=True
     )
 
     trainer = Trainer(
         model=model,
         args=training_args,
-        train_dataset=train_ds_concat,
-        eval_dataset=valid_ds_concat,
+        train_dataset=train_ds,
+        eval_dataset=valid_ds,
         compute_metrics=compute_metrics,
     )
 
@@ -263,12 +179,14 @@ def main():
     kwargs = {
         "tags": ["vision", "image-segmentation"],
         "finetuned_from": config.IN_MODEL_NAME,
-        "dataset": f"{config.HF_USERNAME}/{config.DATASET_ID}",
+        "dataset": config.HF_DATASET,
     }
     
     processor.push_to_hub(hub_model_id, private=True)
     trainer.push_to_hub(**kwargs)
 
+    exit()
+    
     ## Test inference
     from PIL import Image
     image = Image.open(("/home/andrea/my_projects/test_nets/segformer_huggingface/segments/"

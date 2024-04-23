@@ -43,6 +43,7 @@ DATASET_ID              = "TMHMI_Semantic_Dataset"
 DATASET_RELEASE         = "v0.6"
 HF_USERNAME             = "eusandre95"
 HF_TOKEN                = "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"
+HF_DATASET              = "Antreas/Cityscapes"
 
 ################################################
 
@@ -64,7 +65,7 @@ NUM_CLASSES             = 19
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240422-segformer-b0-finetuned-tmhmi-cs-512-512-300ep-24labels"
+OUT_MODEL_NAME          = "240423-segformer-b0-finetuned-cs-512-512-2ep-19labels"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################
