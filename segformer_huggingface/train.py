@@ -84,25 +84,12 @@ def main():
     
     ## Loading the dataset ##
 
-    train_ds = getHfDataset(dataset_names_=["Cityscapes"], split_="train")
-    valid_ds = getHfDataset(dataset_names_=["Cityscapes"], split_="val")
-
-    # ds = load_dataset(config.HF_DATASET)
-
-    # ds = ds.shuffle(seed=1)
-    # ds = ds["train"].train_test_split(test_size=0.2)
-    # train_ds = ds["train"]
-    # test_ds = ds["test"]
-
-    # train_ds_concat = concatenate_datasets([train_ds, train_ds_cs])
-    # valid_ds_concat = concatenate_datasets([test_ds, valid_ds_cs])
-
-    # logging.info(f"##### ----- Concat dataset [train]: {train_ds_concat}")
-    # logging.info(f"##### ----- Concat dataset [valid]: {valid_ds_concat}")
+    train_ds = getHfDataset(dataset_names_=["TMHMI", "Cityscapes"], split_="train")
+    valid_ds = getHfDataset(dataset_names_=["TMHMI", "Cityscapes"], split_="val")
 
     global id2label
 
-    filename = "dataset_utils/id2label_cityscapes.json"
+    filename = "dataset_utils/id2label.json"
     # id2label = json.load(
     #     open(hf_hub_download(repo_id=config.HF_DATASET,
     #                          filename=filename,

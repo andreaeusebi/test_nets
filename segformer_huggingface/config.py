@@ -38,12 +38,11 @@ LOGGING_LEVEL           = logging.INFO
 ##### ----- DATASET PARAMETERS ----- ######
 
 SEGMENTS_API_KEY        = "e6eb70a8f4cd51d900b5ca6a0fcbb504070b5307"
-SEGMENTS_USERNAME       = "andrea_eusebi"
-DATASET_ID              = "TMHMI_Semantic_Dataset"
-DATASET_RELEASE         = "v0.6"
+SEGMENTS_DATASET_ID     = "andrea_eusebi/TMHMI_Semantic_Dataset"
+SEGMENTS_DS_RELEASE     = "v0.7"
 HF_USERNAME             = "eusandre95"
 HF_TOKEN                = "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"
-HF_DATASET              = "Antreas/Cityscapes"
+HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
 
 ################################################
 
@@ -65,7 +64,7 @@ NUM_CLASSES             = 19
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240423-segformer-b0-finetuned-cs-512-512-2ep-19labels"
+OUT_MODEL_NAME          = "240424-test-segformer-b0-finetuned-tmhmi-cs-512-512-2ep-23labels"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################

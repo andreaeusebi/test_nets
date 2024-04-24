@@ -15,12 +15,11 @@
     "13": "car", 
     "14": "truck", 
     "15": "bus", 
-    "16": "forklift", 
+    "16": "train", 
     "17": "motorcycle", 
-    "18": "crane", 
+    "18": "bicycle",
     "19": "rack", 
-    "20": "container", 
+    "20": "forklift", 
     "21": "pallet", 
-    "22": "object", 
-    "23": "mast"
+    "22": "object"
 }

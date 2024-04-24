@@ -4,10 +4,11 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
-from datasets import Dataset, load_dataset
+from datasets import Dataset, load_dataset, concatenate_datasets
 
 DEBUG_MODE                  = False
 ACCEPTABLE_DATASETS_NAMES   = ["TMHMI", "Cityscapes"]
+TMHMI_HF_DATASET_ID         = "eusandre95/TMHMI_Semantic_Dataset"
 CITYSCAPES_HF_DATASET_ID    = "Antreas/Cityscapes"
 
 CS_TO_TMHMI_MAPPING = {
@@ -48,6 +49,35 @@ CS_TO_TMHMI_MAPPING = {
    33:       18      #    0   
 }
 
+TMHMI_REDUCED_MAPPING = {
+#TMHMI_ID  RED_TMHMI_ID  CLASS
+    0:      255,        # unlabeled        
+    1:        0,        # road
+    2:        1,        # sidewalk
+    3:        2,        # building
+    4:        3,        # wall
+    5:        4,        # fence
+    6:        5,        # pole
+    7:        6,        # traffic_light
+    8:        7,        # traffic_sign
+    9:        8,        # vegetation
+   10:        9,        # terrain
+   11:       10,        # sky
+   12:       11,        # person
+   13:       12,        # rider
+   14:       13,        # car
+   15:       14,        # truck
+   16:       15,        # bus
+   17:       20,        # forklift
+   18:       17,        # motorcycle
+   19:      255,        # crane
+   20:       19,        # rack
+   21:      255,        # container
+   22:       21,        # pallet
+   23:       22,        # object
+   24:      255         # mast
+}
+
 def getHfDataset(
         dataset_names_: List[str],
         split_: str
@@ -71,7 +101,7 @@ def getHfDataset(
 
     for dataset_name in dataset_names_:
         if dataset_name == "TMHMI":
-            pass
+            dataset = getHfTmhmiDataset(split_=split_)
         elif dataset_name == "Cityscapes":
             dataset = getHfCityscapesDataset(split_=split_)
 
@@ -86,16 +116,55 @@ def getHfDataset(
         return datasets[0]
     else:
         # Concatenate all the datasets
-        pass
+        ds_concat = concatenate_datasets(datasets)
+
+        logging.info(f"Concatenated dataset [split: '{split_}'] info:\n{ds_concat}")
+        
+        return ds_concat
 
 def getHfTmhmiDataset(split_: str) -> Dataset:
     """
     Load TMHMI dataset from Huggingface.
     """
 
-    ##### ----- TODO ----- #####
+    dataset = load_dataset(TMHMI_HF_DATASET_ID, split=split_)
 
-    pass
+    ### ----- DEBUG ------ ###
+    if DEBUG_MODE:
+        image = np.array(dataset[0]["pixel_values"])
+        sem_bitmap = np.array(dataset[0]["label"])
+
+        logging.info(f"##### ----- MIN: {np.min(sem_bitmap)}")
+        logging.info(f"##### ----- MAX: {np.max(sem_bitmap)}")
+
+        fig = plt.figure()
+        fig.add_subplot(2, 1, 1)
+        plt.imshow(image)
+        fig.add_subplot(2, 1, 2)
+        plt.imshow(sem_bitmap)
+    ### ----- DEBUG ------ ###
+
+    # Map the label IDs to the reduced set of labels
+    dataset = dataset.map(remapTMHMIToReducedLabels, writer_batch_size=100, num_proc=8)
+
+    ### ----- DEBUG ------ ###
+    if DEBUG_MODE:
+        image = np.array(dataset[0]["pixel_values"])
+        sem_bitmap = np.array(dataset[0]["label"])
+
+        logging.info(f"##### ----- MIN: {np.min(sem_bitmap)}")
+        logging.info(f"##### ----- MAX: {np.max(sem_bitmap)}")
+
+        fig = plt.figure()
+        fig.add_subplot(2, 1, 1)
+        plt.imshow(image)
+        fig.add_subplot(2, 1, 2)
+        plt.imshow(sem_bitmap)
+    
+        plt.show()
+    ### ----- DEBUG ------ ###
+
+    return dataset
 
 def getHfCityscapesDataset(split_: str) -> Dataset:
     """
@@ -146,6 +215,20 @@ def getHfCityscapesDataset(split_: str) -> Dataset:
     ### ----- DEBUG ------ ###
 
     return dataset
+
+def remapTMHMIToReducedLabels(example):
+    """
+    Remap original TMHMI labels to the reduced set.
+    Intended to be used as argument of a map() method.
+    """
+
+    orig_bitmap = np.array(example["label"])
+
+    remapped_bitmap = remapLabels(orig_bitmap, TMHMI_REDUCED_MAPPING)
+
+    return {
+        "label": Image.fromarray(remapped_bitmap, mode="I")
+    }
 
 def remapCStoTMHMILabels(example):
     """
