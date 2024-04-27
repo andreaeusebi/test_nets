@@ -52,10 +52,10 @@ HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
 DATASET                 = "TMHMI"
 PALETTE_FUNCTION        = getPaletteFunction(DATASET)
 
-IN_MODEL_NAME           = "nvidia/mit-b0"
+IN_MODEL_NAME           = "nvidia/mit-b2"
 
 H                       = 512
-W                       = 512
+W                       = 1024
 C                       = 3
 
 NUM_CLASSES             = 19
@@ -64,7 +64,7 @@ NUM_CLASSES             = 19
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240424-test-segformer-b0-finetuned-tmhmi-cs-512-512-2ep-23labels"
+OUT_MODEL_NAME          = "240427-segformer-b2-finetuned-tmhmi-cs-512-1024-50ep-23labels"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################

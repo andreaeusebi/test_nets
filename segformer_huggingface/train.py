@@ -111,7 +111,7 @@ def main():
     ## Image processor & data augmentation ##
     global processor
     # processor = SegformerImageProcessor(do_reduce_labels=True)
-    processor = SegformerImageProcessor()
+    processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
 
     # Set transforms
     train_ds.set_transform(train_transforms)
