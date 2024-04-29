@@ -23,69 +23,6 @@ Label = namedtuple( 'Label' , [
     'color'       , # The color of this label as RGB values.
 ])
 
-def labelIDsToTrainIds(orig_mask_, label_metatada_):
-    """ 
-    Remap the IDs of the given segmentation bitmap from the original
-    label IDs to the corresponding train IDs.
-    The semantic bitmaps are torch tensors.
-    """
-    # Initialize new label mask as a copy of the original one 
-    new_mask = orig_mask_.clone().detach()
-
-    ## Remap the original labels to the new set of labels
-    for label in label_metatada_:      
-        original_id = label.id
-        new_id = label.trainId
-       
-        new_mask[orig_mask_ == original_id] = new_id
-
-    return new_mask
-
-def labelsIDsToTrainIdsOnArrays(semantic_bitmap_: np.array,
-                                label_metatada_: List[Label]):
-    """ 
-    Remap the IDs of the given segmentation bitmap from the original
-    label IDs to the corresponding train IDs.
-    The semantic bitmaps are Numpy arrays.
-    """
-    
-    # Initialize new semantic bitmap as a copy of the original one
-    mapped_semantic_bitmap = np.copy(semantic_bitmap_)
-
-    ## Remap the original labels to the new set of labels
-    for label in label_metatada_:
-        original_id = label.id
-        new_id = label.trainId
-        mapped_semantic_bitmap[semantic_bitmap_ == original_id] = new_id
-
-    return mapped_semantic_bitmap
-
-def getPalette(dataset_: str) -> Dict[int, Tuple[int, int, int]]:
-    assert dataset_ in ["Cityscapes", "TMHMI"]
-
-    if dataset_ == "Cityscapes":
-        labels = LABELS_CS
-    elif dataset_ == "TMHMI":
-        labels = LABELS_TMHMI
-
-    palette = {}
-
-    for label in labels:
-        # Check if another label with same trainId has already been added
-        # (in case of multiple labels with same trainId, the color of the
-        # first one is used)
-        if label.trainId in palette:
-            continue
-        # If trainId value is 255, ignore that label
-        elif label.trainId == 255:
-            continue
-        # We can add the label to the palette
-        else:
-            palette_pair = {label.trainId : label.color}
-            palette.update(palette_pair)
-
-    return palette
-
 ##### ----- TMHMI Labels ----- #####
 
 LABELS_TMHMI = [
@@ -161,5 +98,72 @@ LABELS_CS = [
     Label(  'bicycle'               , 33 ,     18 ,      0.0036 ,      (119, 11, 32) ), #
     Label(  'license plate'         , -1 ,    255 ,      0.0    ,      (  0,  0,142) )  #
 ]   
+
+###################################################
+
+##### ----- Methods using labels ----- #####
+
+def labelIDsToTrainIds(orig_mask_, label_metatada_):
+    """ 
+    Remap the IDs of the given segmentation bitmap from the original
+    label IDs to the corresponding train IDs.
+    The semantic bitmaps are torch tensors.
+    """
+    # Initialize new label mask as a copy of the original one 
+    new_mask = orig_mask_.clone().detach()
+
+    ## Remap the original labels to the new set of labels
+    for label in label_metatada_:      
+        original_id = label.id
+        new_id = label.trainId
+       
+        new_mask[orig_mask_ == original_id] = new_id
+
+    return new_mask
+
+def labelsIDsToTrainIdsOnArrays(semantic_bitmap_: np.array,
+                                label_metatada_: List[Label]):
+    """ 
+    Remap the IDs of the given segmentation bitmap from the original
+    label IDs to the corresponding train IDs.
+    The semantic bitmaps are Numpy arrays.
+    """
+    
+    # Initialize new semantic bitmap as a copy of the original one
+    mapped_semantic_bitmap = np.copy(semantic_bitmap_)
+
+    ## Remap the original labels to the new set of labels
+    for label in label_metatada_:
+        original_id = label.id
+        new_id = label.trainId
+        mapped_semantic_bitmap[semantic_bitmap_ == original_id] = new_id
+
+    return mapped_semantic_bitmap
+
+def getPalette(dataset_: str) -> Dict[int, Tuple[int, int, int]]:
+    assert dataset_ in ["Cityscapes", "TMHMI"]
+
+    if dataset_ == "Cityscapes":
+        labels = LABELS_CS
+    elif dataset_ == "TMHMI":
+        labels = LABELS_TMHMI
+
+    palette = {}
+
+    for label in labels:
+        # Check if another label with same trainId has already been added
+        # (in case of multiple labels with same trainId, the color of the
+        # first one is used)
+        if label.trainId in palette:
+            continue
+        # If trainId value is 255, ignore that label
+        elif label.trainId == 255:
+            continue
+        # We can add the label to the palette
+        else:
+            palette_pair = {label.trainId : label.color}
+            palette.update(palette_pair)
+
+    return palette
 
 ###################################################
