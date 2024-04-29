@@ -10,6 +10,7 @@ Project folders structure:
 project/
     models/         Where models state dictionaries and onnx files are saved.
     nets/           Contains networks implementation source code.
+    dataset_utils/  Contains util scripts and files for datasets handling.
     config.py
     train.py
     demo.py
@@ -52,19 +53,19 @@ HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
 DATASETS                = ["TMHMI", "Cityscapes"]
 PALETTE                 = getPalette(DATASETS[0])
 
-IN_MODEL_NAME           = "eusandre95/240424-segformer-b2-finetuned-tmhmi-cs-512-512-50ep-23labels"
+IN_MODEL_NAME           = "nvidia/mit-b0"
 
 H                       = 512
 W                       = 512
 C                       = 3
 
-NUM_CLASSES             = 19
+NUM_CLASSES             = 23
 
 ################################################
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240427-segformer-b2-finetuned-tmhmi-cs-512-1024-50ep-23labels"
+OUT_MODEL_NAME          = "240429-test-segformer-b0-finetuned-tmhmi-cs-512-1024-2ep-23labels"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################

@@ -1,6 +1,8 @@
 from collections import namedtuple
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Optional
 import numpy as np
+
+ACCEPTABLE_DATASETS_NAMES   = ["TMHMI", "Cityscapes"]
 
 # Tuple representing a generic label
 Label = namedtuple( 'Label' , [
@@ -141,7 +143,7 @@ def labelsIDsToTrainIdsOnArrays(semantic_bitmap_: np.array,
     return mapped_semantic_bitmap
 
 def getPalette(dataset_: str) -> Dict[int, Tuple[int, int, int]]:
-    assert dataset_ in ["Cityscapes", "TMHMI"]
+    assert dataset_ in ACCEPTABLE_DATASETS_NAMES
 
     if dataset_ == "Cityscapes":
         labels = LABELS_CS
@@ -166,4 +168,24 @@ def getPalette(dataset_: str) -> Dict[int, Tuple[int, int, int]]:
 
     return palette
 
+def getId2Label(dataset_: str, exclude_255_: Optional[bool] = True) -> Dict[int, str]:
+    assert dataset_ in ACCEPTABLE_DATASETS_NAMES
+    
+    id2label = {}
+
+    if dataset_ == "Cityscapes":
+        labels = LABELS_CS
+    elif dataset_ == "TMHMI":
+        labels = LABELS_TMHMI
+
+    for label in labels:
+        if label.trainId in id2label:
+            continue
+        elif exclude_255_ and label.trainId == 255:
+            continue
+        else:
+            new_pair = {label.trainId : label.name}
+            id2label.update(new_pair)  
+
+    return id2label
 ###################################################

@@ -2,6 +2,9 @@
 import signal as sg
 sg.signal(sg.SIGINT, sg.SIG_DFL)
 
+import sys 
+sys.path.insert(0, "./../" )
+
 from datasets import load_dataset, concatenate_datasets
 from huggingface_hub import hf_hub_download, login
 from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
@@ -17,7 +20,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import config
-from dataset_utils.get_dataset import getHfDataset
+from segformer_huggingface.dataset_utils.get_dataset import getHfDataset
+from segformer_huggingface.dataset_utils.label import getId2Label
 
 metric = evaluate.load("mean_iou")
 
@@ -88,15 +92,7 @@ def main():
 
     global id2label
 
-    filename = "dataset_utils/id2label.json"
-    # id2label = json.load(
-    #     open(hf_hub_download(repo_id=config.HF_DATASET,
-    #                          filename=filename,
-    #                          repo_type="dataset"),
-    #     "r")
-    # )
-
-    id2label = json.load(open(filename))
+    id2label = getId2Label(config.DATASETS[0], exclude_255_=True)
     
     id2label = {int(k): v for k, v in id2label.items()}
     label2id = {v: k for k, v in id2label.items()}
@@ -109,7 +105,6 @@ def main():
 
     ## Image processor & data augmentation ##
     global processor
-    # processor = SegformerImageProcessor(do_reduce_labels=True)
     processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
 
     # Set transforms
@@ -165,52 +160,11 @@ def main():
     kwargs = {
         "tags": ["vision", "image-segmentation"],
         "finetuned_from": config.IN_MODEL_NAME,
-        "dataset": config.HF_DATASET,
+        "dataset(s)": (" " + dataset for dataset in config.DATASETS),
     }
     
     processor.push_to_hub(hub_model_id, private=True)
     trainer.push_to_hub(**kwargs)
-
-    exit()
-    
-    ## Test inference
-    from PIL import Image
-    image = Image.open(("/home/andrea/my_projects/test_nets/segformer_huggingface/segments/"
-                        "andrea_eusebi_TMHMI_Semantic_Dataset/v0.1/seq_04_frame000000_rgb.png")).convert("RGB")
-   
-    inputs = processor(images=image, return_tensors="pt").to(config.DEVICE)
-    outputs = model(**inputs)
-    logits = outputs.logits  # shape (batch_size, num_labels, height/4, width/4)
-
-    print(f"logits.shape: {logits.shape}")
-
-    # First, rescale logits to original image size
-    upsampled_logits = nn.functional.interpolate(
-        logits,
-        size=image.size[::-1], # (height, width)
-        mode='bilinear',
-        align_corners=False
-    )
-
-    # Second, apply argmax on the class dimension
-    pred_seg = upsampled_logits.argmax(dim=1)[0].to("cpu")
-
-    pred_img = get_seg_overlay(image, pred_seg)
-    # gt_img = get_seg_overlay(image, np.array(gt_seg))
-
-    # f, axs = plt.subplots(1, 2)
-    # f.set_figheight(30)
-    # f.set_figwidth(50)
-
-    # axs[0].set_title("Prediction", {'fontsize': 40})
-    # axs[0].imshow(pred_img)
-    # axs[1].set_title("Ground truth", {'fontsize': 40})
-    # axs[1].imshow(gt_img)
-
-    plt.figure(figsize=(15, 10))
-    plt.imshow(pred_img)
-
-    plt.show()
 
 if __name__ == "__main__":
     main()
