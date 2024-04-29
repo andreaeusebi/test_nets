@@ -78,6 +78,9 @@ def main():
     plt.figure(figsize=(15, 10))
     plt.imshow(img)
 
+    plt.figure(figsize=(15, 10))
+    plt.imshow(color_seg)
+
     plt.show()
 
 if __name__ == "__main__":
