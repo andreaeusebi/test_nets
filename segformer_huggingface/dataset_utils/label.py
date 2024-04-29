@@ -1,4 +1,6 @@
 from collections import namedtuple
+from typing import Dict, Tuple, List
+import numpy as np
 
 # Tuple representing a generic label
 Label = namedtuple( 'Label' , [
@@ -22,6 +24,11 @@ Label = namedtuple( 'Label' , [
 ])
 
 def labelIDsToTrainIds(orig_mask_, label_metatada_):
+    """ 
+    Remap the IDs of the given segmentation bitmap from the original
+    label IDs to the corresponding train IDs.
+    The semantic bitmaps are torch tensors.
+    """
     # Initialize new label mask as a copy of the original one 
     new_mask = orig_mask_.clone().detach()
 
@@ -34,7 +41,26 @@ def labelIDsToTrainIds(orig_mask_, label_metatada_):
 
     return new_mask
 
-def getPalette(dataset_: str) -> dict:
+def labelsIDsToTrainIdsOnArrays(semantic_bitmap_: np.array,
+                                label_metatada_: List[Label]):
+    """ 
+    Remap the IDs of the given segmentation bitmap from the original
+    label IDs to the corresponding train IDs.
+    The semantic bitmaps are Numpy arrays.
+    """
+    
+    # Initialize new semantic bitmap as a copy of the original one
+    mapped_semantic_bitmap = np.copy(semantic_bitmap_)
+
+    ## Remap the original labels to the new set of labels
+    for label in label_metatada_:
+        original_id = label.id
+        new_id = label.trainId
+        mapped_semantic_bitmap[semantic_bitmap_ == original_id] = new_id
+
+    return mapped_semantic_bitmap
+
+def getPalette(dataset_: str) -> Dict[int, Tuple[int, int, int]]:
     assert dataset_ in ["Cityscapes", "TMHMI"]
 
     if dataset_ == "Cityscapes":
@@ -60,6 +86,40 @@ def getPalette(dataset_: str) -> dict:
 
     return palette
 
+##### ----- TMHMI Labels ----- #####
+
+LABELS_TMHMI = [
+    #          name                   id    trainId     frequency          color
+    Label(  'unlabeled'             ,  0 ,    255 ,      0.0    ,      (  0,  0,  0) ), #
+    Label(  'road'                  ,  1 ,      0 ,      0.0    ,      (128, 64,128) ), #
+    Label(  'sidewalk'              ,  2 ,      1 ,      0.0    ,      (244, 35,232) ), #
+    Label(  'building'              ,  3 ,      2 ,      0.0    ,      ( 70, 70, 70) ), #
+    Label(  'wall'                  ,  4 ,      3 ,      0.0    ,      (102,102,156) ), #
+    Label(  'fence'                 ,  5 ,      4 ,      0.0    ,      (190,153,153) ), #
+    Label(  'pole'                  ,  6 ,      5 ,      0.0    ,      (153,153,153) ), #
+    Label(  'traffic_light'         ,  7 ,      6 ,      0.0    ,      (250,170, 30) ), #
+    Label(  'traffic_sign'          ,  8 ,      7 ,      0.0    ,      (220,220,  0) ), #
+    Label(  'vegetation'            ,  9 ,      8 ,      0.0    ,      (107,142, 35) ), #
+    Label(  'terrain'               , 10 ,      9 ,      0.0    ,      (152,251,152) ), #
+    Label(  'sky'                   , 11 ,     10 ,      0.0    ,      ( 70,130,180) ), #
+    Label(  'person'                , 12 ,     11 ,      0.0    ,      (220, 20, 60) ), #
+    Label(  'rider'                 , 13 ,     12 ,      0.0    ,      (255,  0,  0) ), #
+    Label(  'car'                   , 14 ,     13 ,      0.0    ,      (  0,  0,142) ), #
+    Label(  'truck'                 , 15 ,     14 ,      0.0    ,      (  0,  0, 70) ), #
+    Label(  'bus'                   , 16 ,     15 ,      0.0    ,      (  0, 60,100) ), #
+    Label(  'forklift'              , 17 ,     20 ,      0.0    ,      (220,220,220) ), #
+    Label(  'motorcycle'            , 18 ,     17 ,      0.0    ,      (  0,  0,230) ), #
+    Label(  'crane'                 , 19 ,    255 ,      0.0    ,      ( 80,227,194) ), #
+    Label(  'rack'                  , 20 ,     19 ,      0.0    ,      (248,248, 28) ), #
+    Label(  'container'             , 21 ,    255 ,      0.0    ,      ( 81,  0, 81) ), #
+    Label(  'pallet'                , 22 ,     21 ,      0.0    ,      (189, 16,224) ), #
+    Label(  'object'                , 23 ,     22 ,      0.0    ,      (114, 74,  0) ), #
+    Label(  'mast'                  , 24 ,    255 ,      0.0    ,      ( 65,117,  5) ), #
+    Label(  'train'                 , -1 ,     16 ,      0.0    ,      (  0, 80,100) ), #
+    Label(  'bicycle'               , -1 ,     18 ,      0.0    ,      (119, 11, 32) )  #
+]   
+
+###################################################
 
 ##### ----- Cityscapes Labels ----- #####
 
@@ -100,41 +160,6 @@ LABELS_CS = [
     Label(  'motorcycle'            , 32 ,     17 ,      0.0008 ,      (  0,  0,230) ), #
     Label(  'bicycle'               , 33 ,     18 ,      0.0036 ,      (119, 11, 32) ), #
     Label(  'license plate'         , -1 ,    255 ,      0.0    ,      (  0,  0,142) )  #
-]   
-
-###################################################
-
-##### ----- TMHMI Labels ----- #####
-
-LABELS_TMHMI = [
-    #          name                   id    trainId     frequency          color
-    Label(  'unlabeled'             ,  0 ,    255 ,      0.0    ,      (  0,  0,  0) ), #
-    Label(  'road'                  ,  1 ,      0 ,      0.0    ,      (128, 64,128) ), #
-    Label(  'sidewalk'              ,  2 ,      1 ,      0.0    ,      (244, 35,232) ), #
-    Label(  'building'              ,  3 ,      2 ,      0.0    ,      ( 70, 70, 70) ), #
-    Label(  'wall'                  ,  4 ,      3 ,      0.0    ,      (102,102,156) ), #
-    Label(  'fence'                 ,  5 ,      4 ,      0.0    ,      (190,153,153) ), #
-    Label(  'pole'                  ,  6 ,      5 ,      0.0    ,      (153,153,153) ), #
-    Label(  'traffic_light'         ,  7 ,      6 ,      0.0    ,      (250,170, 30) ), #
-    Label(  'traffic_sign'          ,  8 ,      7 ,      0.0    ,      (220,220,  0) ), #
-    Label(  'vegetation'            ,  9 ,      8 ,      0.0    ,      (107,142, 35) ), #
-    Label(  'terrain'               , 10 ,      9 ,      0.0    ,      (152,251,152) ), #
-    Label(  'sky'                   , 11 ,     10 ,      0.0    ,      ( 70,130,180) ), #
-    Label(  'person'                , 12 ,     11 ,      0.0    ,      (220, 20, 60) ), #
-    Label(  'rider'                 , 13 ,     12 ,      0.0    ,      (255,  0,  0) ), #
-    Label(  'car'                   , 14 ,     13 ,      0.0    ,      (  0,  0,142) ), #
-    Label(  'truck'                 , 15 ,     14 ,      0.0    ,      (  0,  0, 70) ), #
-    Label(  'bus'                   , 16 ,     15 ,      0.0    ,      (  0, 60,100) ), #
-    Label(  'forklift'              , 17 ,     20 ,      0.0    ,      (220,220,220) ), #
-    Label(  'motorcycle'            , 18 ,     17 ,      0.0    ,      (  0,  0,230) ), #
-    Label(  'crane'                 , 19 ,    255 ,      0.0    ,      ( 80,227,194) ), #
-    Label(  'rack'                  , 20 ,     19 ,      0.0    ,      (248,248, 28) ), #
-    Label(  'container'             , 21 ,    255 ,      0.0    ,      ( 81,  0, 81) ), #
-    Label(  'pallet'                , 22 ,     21 ,      0.0    ,      (189, 16,224) ), #
-    Label(  'object'                , 23 ,     22 ,      0.0    ,      (114, 74,  0) ), #
-    Label(  'mast'                  , 24 ,    255 ,      0.0    ,      ( 65,117,  5) ), #
-    Label(  'train'                 , -1 ,     16 ,      0.0    ,      (  0, 80,100) ), #
-    Label(  'bicycle'               , -1 ,     18 ,      0.0    ,      (119, 11, 32) )  #
 ]   
 
 ###################################################

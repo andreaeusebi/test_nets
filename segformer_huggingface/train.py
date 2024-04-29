@@ -83,8 +83,8 @@ def main():
     
     ## Loading the dataset ##
 
-    train_ds = getHfDataset(dataset_names_=["TMHMI", "Cityscapes"], split_="train")
-    valid_ds = getHfDataset(dataset_names_=["TMHMI", "Cityscapes"], split_="val")
+    train_ds = getHfDataset(dataset_names_=config.DATASETS, split_="train")
+    valid_ds = getHfDataset(dataset_names_=config.DATASETS, split_="val")
 
     global id2label
 

@@ -3,7 +3,7 @@ from pathlib import Path
 import logging
 import torch
 
-from dataset_utils.label import getPalette
+from segformer_huggingface.dataset_utils.label import getPalette
 
 """
 Project folders structure:
@@ -48,9 +48,9 @@ HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
 
 ##### ----- INPUT PARAMETERS ----- ######
 
-# DATASET = ["Cityscapes", "TMHMI"]
-DATASET                 = "TMHMI"
-PALETTE                 = getPalette(DATASET)
+# DATASETS = ["TMHMI", "Cityscapes"]. Is a list of datasets to use, first one defines labels set.
+DATASETS                = ["TMHMI", "Cityscapes"]
+PALETTE                 = getPalette(DATASETS[0])
 
 IN_MODEL_NAME           = "eusandre95/240424-segformer-b2-finetuned-tmhmi-cs-512-512-50ep-23labels"
 
