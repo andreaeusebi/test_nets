@@ -40,7 +40,7 @@ LOGGING_LEVEL           = logging.INFO
 
 SEGMENTS_API_KEY        = "e6eb70a8f4cd51d900b5ca6a0fcbb504070b5307"
 SEGMENTS_DATASET_ID     = "andrea_eusebi/TMHMI_Semantic_Dataset"
-SEGMENTS_DS_RELEASE     = "v0.7"
+SEGMENTS_DS_RELEASE     = "v0.8"
 HF_USERNAME             = "eusandre95"
 HF_TOKEN                = "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"
 HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"

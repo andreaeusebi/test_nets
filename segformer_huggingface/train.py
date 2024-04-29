@@ -160,7 +160,7 @@ def main():
     kwargs = {
         "tags": ["vision", "image-segmentation"],
         "finetuned_from": config.IN_MODEL_NAME,
-        "dataset(s)": (" " + dataset for dataset in config.DATASETS),
+        "dataset(s)": config.HF_DATASET,
     }
     
     processor.push_to_hub(hub_model_id, private=True)

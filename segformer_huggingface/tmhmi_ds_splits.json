@@ -18,7 +18,10 @@
     "seq_04_frame000016_rgb.png":           "val",
     "seq_04_frame000017_rgb.png":           "train",
     "seq_04_frame000018_rgb.png":           "val",
+    "seq_04_frame000019_rgb.png":           "train",
     "seq_04_frame000020_rgb.png":           "train",
     "seq_04_frame000021_rgb.png":           "train",
-    "seq_04_frame000022_rgb.png":           "train"
+    "seq_04_frame000022_rgb.png":           "train",
+    "seq_04_frame000023_rgb.png":           "train",
+    "seq_04_frame000024_rgb.png":           "train"
 }

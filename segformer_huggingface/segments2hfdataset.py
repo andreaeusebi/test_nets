@@ -2,6 +2,9 @@
 import signal as sg
 sg.signal(sg.SIGINT, sg.SIG_DFL)
 
+import sys 
+sys.path.insert(0, "./../" )
+
 from segments import SegmentsClient
 from segments.huggingface import release2dataset
 from segments.utils import get_semantic_bitmap
