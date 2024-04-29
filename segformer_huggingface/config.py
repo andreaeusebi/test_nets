@@ -3,7 +3,7 @@ from pathlib import Path
 import logging
 import torch
 
-from palettes import getPaletteFunction
+from dataset_utils.label import getPalette
 
 """
 Project folders structure:
@@ -50,12 +50,12 @@ HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
 
 # DATASET = ["Cityscapes", "TMHMI"]
 DATASET                 = "TMHMI"
-PALETTE_FUNCTION        = getPaletteFunction(DATASET)
+PALETTE                 = getPalette(DATASET)
 
-IN_MODEL_NAME           = "nvidia/mit-b2"
+IN_MODEL_NAME           = "eusandre95/240424-segformer-b2-finetuned-tmhmi-cs-512-512-50ep-23labels"
 
 H                       = 512
-W                       = 1024
+W                       = 512
 C                       = 3
 
 NUM_CLASSES             = 19

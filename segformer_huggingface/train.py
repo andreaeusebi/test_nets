@@ -65,9 +65,8 @@ def compute_metrics(eval_pred):
 
 def get_seg_overlay(image, seg):
     color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8) # height, width, 3
-    palette = np.array(config.PALETTE_FUNCTION())
-    for label, color in enumerate(palette):
-        color_seg[seg == label, :] = color
+    for label_id, color in config.PALETTE.items():
+        color_seg[seg == label_id, :] = color
 
     # Show image + mask
     img = np.array(image) * 0.5 + color_seg * 0.5

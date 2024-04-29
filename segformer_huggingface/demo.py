@@ -65,11 +65,9 @@ def main():
                           predicted_segmentation_map.shape[1],
                           3),
                          dtype=np.uint8) # height, width, 3
-
-    palette = np.array(config.PALETTE_FUNCTION())
-    
-    for label, color in enumerate(palette):
-        color_seg[predicted_segmentation_map == label, :] = color
+   
+    for label_id, color in config.PALETTE.items():
+        color_seg[predicted_segmentation_map == label_id, :] = color
     
     ## Show image overlapped with colour mask
     img = np.array(image) * 0.5 + color_seg * 0.5
