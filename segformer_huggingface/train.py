@@ -121,9 +121,9 @@ def main():
 
     ## Set up the Trainer ##
 
-    epochs = 2
+    epochs = 50
     lr = 0.00006
-    batch_size = 2
+    batch_size = 8
 
     hub_model_id = config.OUT_MODEL_NAME
 
@@ -160,7 +160,7 @@ def main():
     kwargs = {
         "tags": ["vision", "image-segmentation"],
         "finetuned_from": config.IN_MODEL_NAME,
-        "dataset(s)": config.HF_DATASET,
+        "dataset": config.HF_DATASET,
     }
     
     processor.push_to_hub(hub_model_id, private=True)
