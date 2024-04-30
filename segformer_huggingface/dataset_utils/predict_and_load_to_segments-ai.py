@@ -27,6 +27,10 @@ def visualize(*args):
     plt.show()
 
 def convertToSegmentsFormat(seg_bitmap: np.array):
+    """
+    Convert from segmentation bitmap to instance bitmap (NOT WORKING!),
+    as well as create annotations list as expect by Segments.ai.
+    """
     instance_bitmap = np.copy(seg_bitmap).astype(np.uint32)
     annotations = []
     
@@ -35,15 +39,15 @@ def convertToSegmentsFormat(seg_bitmap: np.array):
     for label_id, color in config.PALETTE.items():
         category_id = label_id
 
-        logging.debug(f"Evaluating category id: {category_id+1}...")
+        logging.info(f"Evaluating category id: {category_id+1}...")
 
         if (seg_bitmap == category_id).astype(np.int8).sum() == 0:
-            logging.debug("Skipping id")
+            logging.info("Skipping id")
             continue
 
         instance_bitmap[seg_bitmap == category_id] = instance_id
 
-        logging.debug(f"'id': {instance_id}, 'category_id': {category_id+1}")
+        logging.info(f"'id': {instance_id}, 'category_id': {category_id+1}")
         annotations.append({'id': instance_id, 'category_id': category_id+1})
 
         instance_id += 1
