@@ -53,21 +53,21 @@ HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
 DATASETS                = ["TMHMI", "Cityscapes"]
 PALETTE                 = getPalette(DATASETS[0])
 
-IN_MODEL_NAME           = "nvidia/mit-b0"
+IN_MODEL_NAME           = "nvidia/mit-b2"
 
 H                       = 512
-W                       = 512
+W                       = 1024
 C                       = 3
 
-EPOCHS                  = 1
+EPOCHS                  = 50
 LEARNING_RATE           = 0.00006
-BATCH_SIZE              = 4
+BATCH_SIZE              = 8
 
 ################################################
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240507-test-segformer-b0"
+OUT_MODEL_NAME          = "240508-segformer-b2-finetuned-tmhmi-cs-512-1024-50ep-23labels-augm"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################

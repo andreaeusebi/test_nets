@@ -32,7 +32,8 @@ train_augm = Albu.Compose(
     [
         Albu.OneOf(
             [
-                Albu.RandomSizedCrop(min_max_height=(config.H/2, config.H*2),
+                # 960 because it half of TMHMI images width
+                Albu.RandomSizedCrop(min_max_height=(config.H/2, 960),
                                      size=(config.H, config.W),
                                      w2h_ratio=config.W/config.H,
                                      p=0.5,
@@ -178,6 +179,8 @@ def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
 					    level=config.LOGGING_LEVEL)
     
+    logging.info("[train.py]: Starting training script...")
+    
     # Login to Huggingface
     login(config.HF_TOKEN)
     
@@ -264,6 +267,8 @@ def main():
     
     processor.push_to_hub(hub_model_id, private=True)
     trainer.push_to_hub(**kwargs)
+
+    logging.info("[train.py]: Training script completed!")
 
 if __name__ == "__main__":
     main()
