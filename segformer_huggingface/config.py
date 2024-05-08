@@ -59,13 +59,15 @@ H                       = 512
 W                       = 512
 C                       = 3
 
-NUM_CLASSES             = 23
+EPOCHS                  = 1
+LEARNING_RATE           = 0.00006
+BATCH_SIZE              = 4
 
 ################################################
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240429-test-segformer-b0-finetuned-tmhmi-cs-512-1024-2ep-23labels"
+OUT_MODEL_NAME          = "240507-test-segformer-b0"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################

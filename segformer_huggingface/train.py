@@ -23,18 +23,114 @@ import config
 from segformer_huggingface.dataset_utils.get_dataset import getHfDataset
 from segformer_huggingface.dataset_utils.label import getId2Label
 
+import albumentations as Albu
+import cv2
+
 metric = evaluate.load("mean_iou")
 
+train_augm = Albu.Compose(
+    [
+        Albu.OneOf(
+            [
+                Albu.RandomSizedCrop(min_max_height=(config.H/2, config.H*2),
+                                     size=(config.H, config.W),
+                                     w2h_ratio=config.W/config.H,
+                                     p=0.5,
+                                     interpolation=cv2.INTER_AREA),
+                Albu.Resize(config.H,
+                            config.W,
+                            p=0.5,
+                            interpolation=cv2.INTER_AREA),
+            ],
+            p=1.0
+        ),
+        Albu.HorizontalFlip(p=0.5),
+        Albu.ColorJitter(brightness=0.25,
+                         contrast=0.25,
+                         saturation=0.25,
+                         hue=0.1,
+                         p=0.5),
+        Albu.ChannelShuffle(p=0.2)
+    ]
+)
+
+valid_augm = Albu.Compose(
+    [
+        Albu.Resize(config.H,
+                    config.W,
+                    interpolation=cv2.INTER_AREA,
+                    p=1.0)
+    ]
+)
+
 def train_transforms(example_batch):
-    images = [x.convert("RGB") for x in example_batch['pixel_values']]
-    labels = [x for x in example_batch['label']]
+    # images = [x.convert("RGB") for x in example_batch['pixel_values']]
+    # labels = [x for x in example_batch['label']]
+    # inputs = processor(images, labels)
+
+    assert(len(example_batch['pixel_values']) == len(example_batch['label']))
+
+    images = []
+    labels = []
+
+    # Parse and augments both images and labels
+    for (img_pil, label_pil) in zip(example_batch['pixel_values'], example_batch['label']):
+        transformed = train_augm(image=np.array(img_pil.convert("RGB")),
+                                 mask=np.array(label_pil))
+        images.append(transformed["image"])
+        labels.append(transformed["mask"])
+
+    # logging.info(f"type(images): {type(images)}")
+    # logging.info(f"type(labels): {type(labels)}")
+    # logging.info(f"type(images[0]): {type(images[0])}")
+    # logging.info(f"type(labels[0]): {type(labels[0])}")
+
+    assert(len(images) == len(labels))
+
+    # Complete preprocessing (normalization and rescaling to 0-1 range)
     inputs = processor(images, labels)
+    # # inputs = processor.preprocess(images=images,
+    # #                               segmentation_maps=labels,
+    # #                               return_tensors="pt")
+
+    # logging.info(f"type(inputs): {type(inputs)}")
+    # logging.info(f"type(inputs['pixel_values']): {type(inputs['pixel_values'])}")
+    # logging.info(f"type(inputs['labels']): {type(inputs['labels'])}")
+
+    # logging.info(f"type(inputs['pixel_values'][0]): {type(inputs['pixel_values'][0])}")
+    # logging.info(f"type(inputs['labels'][0]): {type(inputs['labels'][0])}")
+
+    
+    # logging.info(f"--- pixel_values: Shape: {inputs['pixel_values'].shape} - "
+    #              f"Type: {inputs['pixel_values'].dtype}")
+    
+    # logging.info(f"--- labels: Shape: {inputs['labels'].shape} - "
+    #              f"Type: {inputs['labels'].dtype}")
+
     return inputs
 
 def val_transforms(example_batch):
-    images = [x.convert("RGB") for x in example_batch['pixel_values']]
-    labels = [x for x in example_batch['label']]
+    # images = [x.convert("RGB") for x in example_batch['pixel_values']]
+    # labels = [x for x in example_batch['label']]
+    # inputs = processor(images, labels)
+
+    assert(len(example_batch['pixel_values']) == len(example_batch['label']))
+
+    images = []
+    labels = []
+
+    # Parse and augments both images and labels
+    for (img_pil, label_pil) in zip(example_batch['pixel_values'], example_batch['label']):
+        transformed = valid_augm(image=np.array(img_pil.convert("RGB")),
+                                 mask=np.array(label_pil))
+        images.append(transformed["image"])
+        labels.append(transformed["mask"])
+
+    assert(len(images) == len(labels))
+
+    # Complete preprocessing (normalization and rescaling to 0-1 range)
     inputs = processor(images, labels)
+
     return inputs
 
 def compute_metrics(eval_pred):
@@ -105,7 +201,11 @@ def main():
 
     ## Image processor & data augmentation ##
     global processor
-    processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
+    # processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
+    processor = SegformerImageProcessor(do_resize=False,
+                                        do_rescale=True,
+                                        do_normalize=True,
+                                        do_reduce_labels=False)
 
     # Set transforms
     train_ds.set_transform(train_transforms)
@@ -121,11 +221,10 @@ def main():
 
     ## Set up the Trainer ##
 
-    epochs = 50
-    lr = 0.00006
-    batch_size = 8
-
-    hub_model_id = config.OUT_MODEL_NAME
+    epochs          = config.EPOCHS
+    lr              = config.LEARNING_RATE
+    batch_size      = config.BATCH_SIZE
+    hub_model_id    = config.OUT_MODEL_NAME
 
     training_args = TrainingArguments(
         output_dir=config.OUT_MODEL_NAME,
