@@ -1,7 +1,11 @@
-torch
-transformers
-datasets
+torch==2.0.1+cu118
+pandas==1.5.3
+transformers==4.39.3
+datasets==2.19.0
 segments-ai
 scikit-image
-evaluate
+evaluate==0.4.1
 accelerate>=0.21.0
+albumentations==1.4.6
+numpy==1.24.4
+torchmetrics
