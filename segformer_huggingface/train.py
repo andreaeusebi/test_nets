@@ -5,16 +5,15 @@ sg.signal(sg.SIGINT, sg.SIG_DFL)
 import sys 
 sys.path.insert(0, "./../" )
 
-from datasets import load_dataset, concatenate_datasets
-from huggingface_hub import hf_hub_download, login
+from huggingface_hub import login, upload_file
 from transformers import SegformerImageProcessor, SegformerForSemanticSegmentation
 from transformers import TrainingArguments
 from transformers import Trainer
 import torch
 from torch import nn
 import evaluate
+from torchmetrics.classification import MulticlassConfusionMatrix
 
-import json
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,8 +25,19 @@ from segformer_huggingface.dataset_utils.label import getId2Label
 import albumentations as Albu
 import cv2
 
-metric = evaluate.load("mean_iou")
+### ---- Global Variables ----- ###
+epoch_counter = 0
 
+### ---- Training Metrics ----- ###
+mean_iou = evaluate.load("mean_iou")
+
+valid_conf_matrix_metric = MulticlassConfusionMatrix(
+    num_classes=23,
+    normalize="true",
+    ignore_index=255
+)
+
+### ---- Augmentations ----- ###
 train_augm = Albu.Compose(
     [
         Albu.OneOf(
@@ -147,22 +157,46 @@ def compute_metrics(eval_pred):
         ).argmax(dim=1)
 
         pred_labels = logits_tensor.detach().cpu().numpy()
-        metrics = metric._compute(
-                predictions=pred_labels,
-                references=labels,
-                num_labels=len(id2label),
-                ignore_index=255,
-                reduce_labels=False, # we've already reduced the labels ourselves
-            )
+
+        ## Compute confusion matrix if this is last epoch
+        global epoch_counter
+        if epoch_counter == config.EPOCHS - 1:
+            logging.info(f"[train.py]: Arrived at last epoch ({epoch_counter}). "
+                          "Computing confusion matrix!")
+            
+            labels_tensor = torch.from_numpy(labels)
+            valid_conf_matrix_metric(logits_tensor, labels_tensor)
+
+            fig, ax = valid_conf_matrix_metric.plot(labels=id2label.values())
+            figure = plt.gcf() # get current figure
+            figure.set_size_inches(16, 16) # set figure's size manually
+
+            plt.savefig(config.PROJECT_DIR + config.OUT_MODEL_NAME + "/" + "conf_matrix.png",
+                        dpi=200,
+                        bbox_inches='tight') # bbox_inches removes extra white spaces
+
+            figure.show()
+            plt.show()
+
+        mean_iou_results = mean_iou._compute(
+            predictions=pred_labels,
+            references=labels,
+            num_labels=len(id2label),
+            ignore_index=255,
+            reduce_labels=False, # we've already reduced the labels ourselves
+        )
 
     # add per category metrics as individual key-value pairs
-    per_category_accuracy = metrics.pop("per_category_accuracy").tolist()
-    per_category_iou = metrics.pop("per_category_iou").tolist()
+    per_category_accuracy = mean_iou_results.pop("per_category_accuracy").tolist()
+    per_category_iou = mean_iou_results.pop("per_category_iou").tolist()
 
-    metrics.update({f"accuracy_{id2label[i]}": v for i, v in enumerate(per_category_accuracy)})
-    metrics.update({f"iou_{id2label[i]}": v for i, v in enumerate(per_category_iou)})
+    mean_iou_results.update({f"accuracy_{id2label[i]}": v for i, v in enumerate(per_category_accuracy)})
+    mean_iou_results.update({f"iou_{id2label[i]}": v for i, v in enumerate(per_category_iou)})
 
-    return metrics
+    ## REMARK: THIS WORKS AS LONG AS WE RUN THIS METHOD ONCE PER EPOCH!!
+    epoch_counter += 1
+
+    return mean_iou_results
 
 def get_seg_overlay(image, seg):
     color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8) # height, width, 3
@@ -174,6 +208,24 @@ def get_seg_overlay(image, seg):
     img = img.astype(np.uint8)
 
     return img
+
+def appendContentInFile(file_name:str, line_idx:int, content:str):
+    """
+    This method add content at a specific line to the given file.  
+    """
+    # Python starts counting at 0, but people start counting at one. This accounts for that.
+    line_idx -= 1
+
+    with open(file_name, "r") as file: # Open the file in read mode
+        # Assign the file as a list to a variable
+        lines = file.readlines()
+        # Save the line in a temporayry string
+        prev_line = lines[line_idx]
+        # Append the proper line with the provided content
+        lines[line_idx] = content + "\n" + prev_line
+
+    with open(file_name, "w") as file: # Open the file in write mode
+        file.write("".join(lines)) # Write the modified content to the file
 
 def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
@@ -236,7 +288,7 @@ def main():
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         save_total_limit=3,
-        evaluation_strategy="epoch",
+        evaluation_strategy="epoch",  ## NEED TO DO EVERY EPOCH OTHERWISE CONFUS MAT COUNTER DOESN'T WORK
         save_strategy="epoch",
         # save_steps=20,
         # eval_steps=20,
@@ -265,8 +317,26 @@ def main():
         "dataset": config.HF_DATASET,
     }
     
+    logging.info("[train.py]: Pushing results to Huggingface hub!")
+
     processor.push_to_hub(hub_model_id, private=True)
     trainer.push_to_hub(**kwargs)
+
+    logging.info("[train.py]: Adding confusions matrix to model hub.")
+
+    appendContentInFile(
+        config.PROJECT_DIR + config.OUT_MODEL_NAME + "/" + "README.md",
+        line_idx=71,  # THIS WORKS AS LONG AS THE README DOESN'T CHANGE!!
+        content="## Confusion Matrix\n![Confusion Matrix on validation data ](conf_matrix.png)\n"
+    )
+    
+    with open(config.PROJECT_DIR + config.OUT_MODEL_NAME + "/" + "README.md", "rb") as fobj:
+        upload_file(path_or_fileobj=fobj,
+                    path_in_repo="README.md",
+                    repo_id=config.HF_USERNAME + "/" + config.OUT_MODEL_NAME,
+                    token=config.HF_TOKEN,
+                    repo_type="model",
+                    commit_message="TEST")
 
     logging.info("[train.py]: Training script completed!")
 
