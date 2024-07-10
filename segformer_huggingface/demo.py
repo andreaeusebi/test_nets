@@ -14,8 +14,16 @@ from pathlib import Path
 import config
 
 def main():
+    ## Collect global params to make visible which are expected by this script
+    LOGGING_LEVEL = config.LOGGING_LEVEL
+    IN_MODEL_NAME = config.IN_MODEL_NAME
+    DEVICE        = config.DEVICE
+    H             = config.H
+    W             = config.W
+    PALETTE       = config.PALETTE
+
     logging.basicConfig(format="[demo.py][%(levelname)s]: %(message)s",
-					    level=config.LOGGING_LEVEL)
+					    level=LOGGING_LEVEL)
     
     ## Parse input arguments
     parser=argparse.ArgumentParser(description="Run a SegFormer model on a given image.")
@@ -28,17 +36,17 @@ def main():
     assert(Path(args.image_fpath).exists())
 
     ## Load the model
-    model = SegformerForSemanticSegmentation.from_pretrained(config.IN_MODEL_NAME)
-    model.to(config.DEVICE)
+    model = SegformerForSemanticSegmentation.from_pretrained(IN_MODEL_NAME)
+    model.to(DEVICE)
 
     ## Setup image processor (for both pre and post processing of images)
-    processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
+    processor = SegformerImageProcessor(size= {"height": H, "width": W})
 
     ## Load image
     image = Image.open(args.image_fpath).convert("RGB")
     
     ## Preprocess the image (resize + normalize)
-    pixel_values = processor(image, return_tensors="pt").pixel_values.to(config.DEVICE)
+    pixel_values = processor(image, return_tensors="pt").pixel_values.to(DEVICE)
 
     logging.info(f"pixel_values.shape: {pixel_values.shape}")
 
@@ -66,7 +74,7 @@ def main():
                           3),
                          dtype=np.uint8) # height, width, 3
    
-    for label_id, color in config.PALETTE.items():
+    for label_id, color in PALETTE.items():
         color_seg[predicted_segmentation_map == label_id, :] = color
     
     ## Show image overlapped with colour mask
