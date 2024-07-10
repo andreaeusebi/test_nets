@@ -3,7 +3,7 @@ from pathlib import Path
 import logging
 import torch
 
-from segformer_huggingface.dataset_utils.label import getPalette
+from dataset_utils.label import getPalette
 
 """
 Project folders structure:
@@ -53,7 +53,7 @@ HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
 DATASETS                = ["TMHMI", "Cityscapes"]
 PALETTE                 = getPalette(DATASETS[0])
 
-IN_MODEL_NAME           = "nvidia/mit-b2"
+IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
 
 H                       = 512
 W                       = 1024
