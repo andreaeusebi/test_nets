@@ -29,6 +29,8 @@ MODELS_DIR              = PROJECT_DIR + "models/"
 
 LOGGING_LEVEL           = logging.INFO
 DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
+
+# Name of the pretrained network/backbone to use when loading the model from Huggingface Hub.
 IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
 H                       = 512
 W                       = 1024
