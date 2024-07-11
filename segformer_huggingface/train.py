@@ -199,17 +199,6 @@ def compute_metrics(eval_pred):
 
     return mean_iou_results
 
-def get_seg_overlay(image, seg):
-    color_seg = np.zeros((seg.shape[0], seg.shape[1], 3), dtype=np.uint8) # height, width, 3
-    for label_id, color in config.PALETTE.items():
-        color_seg[seg == label_id, :] = color
-
-    # Show image + mask
-    img = np.array(image) * 0.5 + color_seg * 0.5
-    img = img.astype(np.uint8)
-
-    return img
-
 def appendContentInFile(file_name:str, line_idx:int, content:str):
     """
     This method add content at a specific line to the given file.  
