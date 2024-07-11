@@ -26,7 +26,7 @@ from segformer_huggingface.dataset_utils.get_dataset import getHfDataset
 from segformer_huggingface.dataset_utils.label import getId2Label
 
 ### ---- Global Variables ----- ###
-epoch_counter = 0
+g_epoch_counter = 0
 
 ### ---- Training Metrics ----- ###
 mean_iou = evaluate.load("mean_iou")
@@ -80,7 +80,7 @@ def train_transforms(batch):
     ### ----- Approach using SegformerImageProcessor ----- ###
     # images = [x.convert("RGB") for x in batch['pixel_values']]
     # labels = [x for x in batch['label']]
-    # inputs = processor(images, labels)
+    # inputs = g_processor(images, labels)
 
     ### ----- Approach using Albumentations Transformations ----- ###
     images = []
@@ -96,9 +96,9 @@ def train_transforms(batch):
     assert(len(images) == len(labels))
 
     # Complete preprocessing (normalization and rescaling to 0-1 range)
-    inputs = processor(images, labels)
+    inputs = g_processor(images, labels)
 
-    # inputs = processor.preprocess(images=images,
+    # inputs = g_processor.preprocess(images=images,
     #                               segmentation_maps=labels,
     #                               return_tensors="pt")
 
@@ -121,7 +121,7 @@ def val_transforms(batch):
     ### ----- Approach using SegformerImageProcessor ----- ###
     # images = [x.convert("RGB") for x in batch['pixel_values']]
     # labels = [x for x in batch['label']]
-    # inputs = processor(images, labels)
+    # inputs = g_processor(images, labels)
 
     ### ----- Approach using Albumentations Transformations ----- ###
     images = []
@@ -137,7 +137,7 @@ def val_transforms(batch):
     assert(len(images) == len(labels))
 
     # Complete preprocessing (normalization and rescaling to 0-1 range)
-    inputs = processor(images, labels)
+    inputs = g_processor(images, labels)
 
     return inputs
 
@@ -155,16 +155,17 @@ def compute_metrics(eval_pred):
 
         pred_labels = logits_tensor.detach().cpu().numpy()
 
+        # Inform Python that g_epoch_counter is a global var (needed to change its value)
+        global g_epoch_counter
+
         ## Compute confusion matrix if this is last epoch
-        global epoch_counter
-        if epoch_counter == config.EPOCHS - 1:
-            logging.info(f"[train.py]: Arrived at last epoch ({epoch_counter}). "
-                          "Computing confusion matrix!")
+        if g_epoch_counter == config.EPOCHS - 1:
+            logging.info(f"Arrived at last epoch ({g_epoch_counter}). Computing confusion matrix!")
             
             labels_tensor = torch.from_numpy(labels)
             valid_conf_matrix_metric(logits_tensor, labels_tensor)
 
-            fig, ax = valid_conf_matrix_metric.plot(labels=id2label.values())
+            fig, ax = valid_conf_matrix_metric.plot(labels=g_id2label.values())
             figure = plt.gcf() # get current figure
             figure.set_size_inches(16, 16) # set figure's size manually
 
@@ -178,7 +179,7 @@ def compute_metrics(eval_pred):
         mean_iou_results = mean_iou._compute(
             predictions=pred_labels,
             references=labels,
-            num_labels=len(id2label),
+            num_labels=len(g_id2label),
             ignore_index=255,
             reduce_labels=False, # we've already reduced the labels ourselves
         )
@@ -187,11 +188,11 @@ def compute_metrics(eval_pred):
     per_category_accuracy = mean_iou_results.pop("per_category_accuracy").tolist()
     per_category_iou = mean_iou_results.pop("per_category_iou").tolist()
 
-    mean_iou_results.update({f"accuracy_{id2label[i]}": v for i, v in enumerate(per_category_accuracy)})
-    mean_iou_results.update({f"iou_{id2label[i]}": v for i, v in enumerate(per_category_iou)})
+    mean_iou_results.update({f"accuracy_{g_id2label[i]}": v for i, v in enumerate(per_category_accuracy)})
+    mean_iou_results.update({f"iou_{g_id2label[i]}": v for i, v in enumerate(per_category_iou)})
 
     ## REMARK: THIS WORKS AS LONG AS WE RUN THIS METHOD ONCE PER EPOCH!!
-    epoch_counter += 1
+    g_epoch_counter += 1
 
     return mean_iou_results
 
@@ -235,31 +236,31 @@ def main():
     # Login to Huggingface
     login(config.HF_TOKEN)
     
-    ## Loading the dataset ##
+    ## Loading the dataset(s) ##
 
     train_ds = getHfDataset(dataset_names_=config.DATASETS, split_="train")
     valid_ds = getHfDataset(dataset_names_=config.DATASETS, split_="val")
 
-    global id2label
+    global g_id2label
 
-    id2label = getId2Label(config.DATASETS[0], exclude_255_=True)
+    g_id2label = getId2Label(config.DATASETS[0], exclude_255_=True)
     
-    id2label = {int(k): v for k, v in id2label.items()}
-    label2id = {v: k for k, v in id2label.items()}
+    g_id2label = {int(k): v for k, v in g_id2label.items()}
+    label2id = {v: k for k, v in g_id2label.items()}
 
-    num_labels = len(id2label)
+    num_labels = len(g_id2label)
 
     logging.info(f"Number of labels: {num_labels}")
-    logging.info(f"Id2label: {id2label}")
+    logging.info(f"Id2label: {g_id2label}")
     logging.info(f"label2id: {label2id}")
 
     ## Image processor & data augmentation ##
-    global processor
-    # processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
-    processor = SegformerImageProcessor(do_resize=False,
-                                        do_rescale=True,
-                                        do_normalize=True,
-                                        do_reduce_labels=False)
+    global g_processor
+    # g_processor = SegformerImageProcessor(size= {"height": config.H, "width": config.W})
+    g_processor = SegformerImageProcessor(do_resize=False,
+                                          do_rescale=True,
+                                          do_normalize=True,
+                                          do_reduce_labels=False)
 
     # Set transforms
     train_ds.set_transform(train_transforms)
@@ -269,7 +270,7 @@ def main():
     
     model = SegformerForSemanticSegmentation.from_pretrained(
         config.IN_MODEL_NAME,
-        id2label=id2label,
+        id2label=g_id2label,
         label2id=label2id
     )
 
@@ -308,8 +309,10 @@ def main():
         compute_metrics=compute_metrics,
     )
 
+    ## Training
     trainer.train()
     
+    ## Saving Results to HuggingFace Hub
     kwargs = {
         "tags": ["vision", "image-segmentation"],
         "finetuned_from": config.IN_MODEL_NAME,
@@ -318,9 +321,10 @@ def main():
     
     logging.info("[train.py]: Pushing results to Huggingface hub!")
 
-    processor.push_to_hub(hub_model_id, private=True)
+    g_processor.push_to_hub(hub_model_id, private=True)
     trainer.push_to_hub(**kwargs)
 
+    ## Add Confusion Matrix to model card
     logging.info("[train.py]: Adding confusions matrix to model hub.")
 
     appendContentInFile(

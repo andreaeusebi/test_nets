@@ -33,7 +33,7 @@ DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
 # Name of the pretrained network/backbone to use when loading the model from Huggingface Hub.
 # You can find pretrained weights at the following link:
 # https://huggingface.co/models?other=segformer
-IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
+IN_MODEL_NAME           = "nvidia/mit-b0"
 H                       = 512
 W                       = 1024
 C                       = 3
