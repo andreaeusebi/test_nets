@@ -13,17 +13,17 @@ import torch
 from torch import nn
 import evaluate
 from torchmetrics.classification import MulticlassConfusionMatrix
+import albumentations as Albu
+import cv2
 
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
+## Local Imports ##
 import config
 from segformer_huggingface.dataset_utils.get_dataset import getHfDataset
 from segformer_huggingface.dataset_utils.label import getId2Label
-
-import albumentations as Albu
-import cv2
 
 ### ---- Global Variables ----- ###
 epoch_counter = 0
@@ -74,64 +74,61 @@ valid_augm = Albu.Compose(
     ]
 )
 
-def train_transforms(example_batch):
-    # images = [x.convert("RGB") for x in example_batch['pixel_values']]
-    # labels = [x for x in example_batch['label']]
+def train_transforms(batch):
+    assert(len(batch['pixel_values']) == len(batch['label']))
+
+    ### ----- Approach using SegformerImageProcessor ----- ###
+    # images = [x.convert("RGB") for x in batch['pixel_values']]
+    # labels = [x for x in batch['label']]
     # inputs = processor(images, labels)
 
-    assert(len(example_batch['pixel_values']) == len(example_batch['label']))
-
+    ### ----- Approach using Albumentations Transformations ----- ###
     images = []
     labels = []
 
     # Parse and augments both images and labels
-    for (img_pil, label_pil) in zip(example_batch['pixel_values'], example_batch['label']):
+    for (img_pil, label_pil) in zip(batch['pixel_values'], batch['label']):
         transformed = train_augm(image=np.array(img_pil.convert("RGB")),
                                  mask=np.array(label_pil))
         images.append(transformed["image"])
         labels.append(transformed["mask"])
 
-    # logging.info(f"type(images): {type(images)}")
-    # logging.info(f"type(labels): {type(labels)}")
-    # logging.info(f"type(images[0]): {type(images[0])}")
-    # logging.info(f"type(labels[0]): {type(labels[0])}")
-
     assert(len(images) == len(labels))
 
     # Complete preprocessing (normalization and rescaling to 0-1 range)
     inputs = processor(images, labels)
-    # # inputs = processor.preprocess(images=images,
-    # #                               segmentation_maps=labels,
-    # #                               return_tensors="pt")
 
-    # logging.info(f"type(inputs): {type(inputs)}")
-    # logging.info(f"type(inputs['pixel_values']): {type(inputs['pixel_values'])}")
-    # logging.info(f"type(inputs['labels']): {type(inputs['labels'])}")
+    # inputs = processor.preprocess(images=images,
+    #                               segmentation_maps=labels,
+    #                               return_tensors="pt")
 
-    # logging.info(f"type(inputs['pixel_values'][0]): {type(inputs['pixel_values'][0])}")
-    # logging.info(f"type(inputs['labels'][0]): {type(inputs['labels'][0])}")
-
-    
-    # logging.info(f"--- pixel_values: Shape: {inputs['pixel_values'].shape} - "
-    #              f"Type: {inputs['pixel_values'].dtype}")
-    
-    # logging.info(f"--- labels: Shape: {inputs['labels'].shape} - "
-    #              f"Type: {inputs['labels'].dtype}")
+    ## Debug
+    logging.debug(f"type(images):                    {type(images)}")
+    logging.debug(f"type(labels):                    {type(labels)}")
+    logging.debug(f"type(images[0]):                 {type(images[0])}")
+    logging.debug(f"type(labels[0]):                 {type(labels[0])}")
+    logging.debug(f"type(inputs):                    {type(inputs)}")
+    logging.debug(f"type(inputs['pixel_values']):    {type(inputs['pixel_values'])}")
+    logging.debug(f"type(inputs['labels']):          {type(inputs['labels'])}")
+    logging.debug(f"type(inputs['pixel_values'][0]): {type(inputs['pixel_values'][0])}")
+    logging.debug(f"type(inputs['labels'][0]):       {type(inputs['labels'][0])}")
 
     return inputs
 
-def val_transforms(example_batch):
-    # images = [x.convert("RGB") for x in example_batch['pixel_values']]
-    # labels = [x for x in example_batch['label']]
+def val_transforms(batch):
+    assert(len(batch['pixel_values']) == len(batch['label']))
+
+    ### ----- Approach using SegformerImageProcessor ----- ###
+    # images = [x.convert("RGB") for x in batch['pixel_values']]
+    # labels = [x for x in batch['label']]
     # inputs = processor(images, labels)
 
-    assert(len(example_batch['pixel_values']) == len(example_batch['label']))
-
+    ### ----- Approach using Albumentations Transformations ----- ###
     images = []
     labels = []
 
     # Parse and augments both images and labels
-    for (img_pil, label_pil) in zip(example_batch['pixel_values'], example_batch['label']):
+    for (img_pil, label_pil) in zip(batch['pixel_values'], batch['label']):
         transformed = valid_augm(image=np.array(img_pil.convert("RGB")),
                                  mask=np.array(label_pil))
         images.append(transformed["image"])
@@ -231,7 +228,9 @@ def main():
     logging.basicConfig(format="[train.py][%(levelname)s]: %(message)s",
 					    level=config.LOGGING_LEVEL)
     
-    logging.info("[train.py]: Starting training script...")
+    logging.getLogger("PIL").setLevel(logging.WARNING)
+    
+    logging.info("Starting training script...")
     
     # Login to Huggingface
     login(config.HF_TOKEN)

@@ -31,6 +31,8 @@ LOGGING_LEVEL           = logging.INFO
 DEVICE                  = "cuda" if torch.cuda.is_available() else "cpu"
 
 # Name of the pretrained network/backbone to use when loading the model from Huggingface Hub.
+# You can find pretrained weights at the following link:
+# https://huggingface.co/models?other=segformer
 IN_MODEL_NAME           = "nvidia/segformer-b0-finetuned-cityscapes-512-1024"
 H                       = 512
 W                       = 1024
@@ -63,7 +65,7 @@ BATCH_SIZE              = 8
 
 ##### ----- OUTPUT PARAMETERS ----- ######
 
-OUT_MODEL_NAME          = "240508-segformer-b2-finetuned-tmhmi-cs-512-1024-50ep-23labels-augm"
+OUT_MODEL_NAME          = "240711-test"
 OUT_ONNX_NAME           = "segformer-b0-finetuned-cityscapes-512-1024"
 
 ################################################
