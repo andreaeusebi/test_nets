@@ -25,19 +25,13 @@ import config
 from segformer_huggingface.dataset_utils.get_dataset import getHfDataset
 from segformer_huggingface.dataset_utils.label import getId2Label
 
-### ---- Global Variables ----- ###
+### ----- Constant Params ----- ###  ## MAYBE SHOULD BE PUT IN GLOBAL CONFIG FILE!!!
+IGNORE_INDEX = 255
+
+### ----- Global Variables ----- ###
 g_epoch_counter = 0
 
-### ---- Training Metrics ----- ###
-mean_iou = evaluate.load("mean_iou")
-
-valid_conf_matrix_metric = MulticlassConfusionMatrix(
-    num_classes=23,
-    normalize="true",
-    ignore_index=255
-)
-
-### ---- Augmentations ----- ###
+### ----- Augmentations ----- ###
 train_augm = Albu.Compose(
     [
         Albu.OneOf(
@@ -142,6 +136,15 @@ def val_transforms(batch):
     return inputs
 
 def compute_metrics(eval_pred):
+    ### ----- Training Metrics ----- ###
+    mean_iou_metric = evaluate.load("mean_iou")
+
+    valid_conf_matrix_metric = MulticlassConfusionMatrix(
+        num_classes=len(g_id2label),
+        normalize="true",
+        ignore_index=IGNORE_INDEX
+    )
+
     with torch.no_grad():
         logits, labels = eval_pred
         logits_tensor = torch.from_numpy(logits)
@@ -176,11 +179,11 @@ def compute_metrics(eval_pred):
             figure.show()
             plt.show()
 
-        mean_iou_results = mean_iou._compute(
+        mean_iou_results = mean_iou_metric._compute(
             predictions=pred_labels,
             references=labels,
             num_labels=len(g_id2label),
-            ignore_index=255,
+            ignore_index=IGNORE_INDEX,
             reduce_labels=False, # we've already reduced the labels ourselves
         )
 
