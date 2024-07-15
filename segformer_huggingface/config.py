@@ -39,7 +39,7 @@ W                       = 1024
 C                       = 3
 
 # DATASETS = ["TMHMI", "Cityscapes"]. Is a list of datasets to use, first one defines labels set and color palette.
-DATASETS                = ["TMHMI", "Cityscapes"]
+DATASETS                = ["TMHMI", "Cityscapes"]   #["TMHMI", "Cityscapes", "kitti"]
 PALETTE                 = getPalette(DATASETS[0])
 
 ################################################
@@ -49,9 +49,11 @@ PALETTE                 = getPalette(DATASETS[0])
 SEGMENTS_API_KEY        = "e6eb70a8f4cd51d900b5ca6a0fcbb504070b5307"
 SEGMENTS_DATASET_ID     = "andrea_eusebi/TMHMI_Semantic_Dataset"
 SEGMENTS_DS_RELEASE     = "v0.8"
-HF_USERNAME             = "eusandre95"
-HF_TOKEN                = "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"
-HF_DATASET              = "eusandre95/TMHMI_Semantic_Dataset"
+HF_USERNAME             = "eusandre95"                                  # "TomBig99"
+HF_TOKEN                = "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"       # "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" (Bigi token)
+HF_DATASET              = "TMHMI/kitti360"                              # "eusandre95/TMHMI_Semantic_Dataset"
+KITTI_DIR               = "/home/tommaso/Datasets/kitti360"     
+N                       = 25                                            # keep one kitti image every N images     
 
 ################################################
 
